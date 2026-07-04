@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
+  <text x="8" y="30" font-family="DkgHandwriting" font-size="24" fill="#1c6b2a"
+        transform="rotate(-2 8 30)">sanity check:</text>
+  <text x="14" y="60" font-family="DkgHandwriting" font-size="24" fill="#12307a"
+        transform="rotate(-2 14 60)">Col(3) = 10</text>
+  <text x="14" y="90" font-family="DkgHandwriting" font-size="24" fill="#12307a"
+        transform="rotate(-2 14 90)">Syr(7) = 11</text>
+</svg>

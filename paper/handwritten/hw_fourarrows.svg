@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="110" viewBox="0 0 320 110">
+  <text x="8" y="32" font-family="DkgHandwriting" font-size="25" fill="#12307a"
+        transform="rotate(2 8 32)">the whole proof =</text>
+  <text x="8" y="62" font-family="DkgHandwriting" font-size="25" fill="#12307a"
+        transform="rotate(2 8 62)">just 4 arrows</text>
+  <text x="8" y="92" font-family="DkgHandwriting" font-size="25" fill="#12307a"
+        transform="rotate(2 8 92)">glued together</text>
+  <path d="M175 84 C 210 88, 250 80, 300 86" stroke="#a01818" stroke-width="2.2" fill="none"/>
+  <path d="M290 80 L 302 86 L 289 92" stroke="#a01818" stroke-width="2.2" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="120" viewBox="0 0 820 120">
+  <text x="10" y="60" font-family="DkgHandwriting" font-size="52" fill="#12307a"
+        transform="rotate(-2 10 60)">3n + 1 ... almost bounded!</text>
+  <path d="M12 80 C 220 72, 560 90, 800 76" stroke="#a01818" stroke-width="3" fill="none"
+        stroke-linecap="round"/>
+  <path d="M12 90 C 240 84, 550 100, 800 88" stroke="#a01818" stroke-width="1.6" fill="none"
+        stroke-linecap="round"/>
+</svg>

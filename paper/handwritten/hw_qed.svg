@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="90" viewBox="0 0 260 90">
+  <text x="8" y="46" font-family="DkgHandwriting" font-size="34" fill="#1c6b2a"
+        transform="rotate(-4 8 46)">and that's it!</text>
+  <path d="M8 60 C 70 54, 150 70, 235 56" stroke="#1c6b2a" stroke-width="2.4" fill="none"
+        stroke-linecap="round"/>
+</svg>

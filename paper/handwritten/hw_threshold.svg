@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
+  <text x="8" y="32" font-family="DkgHandwriting" font-size="24" fill="#a01818"
+        transform="rotate(2.5 8 32)">need a threshold</text>
+  <text x="8" y="62" font-family="DkgHandwriting" font-size="24" fill="#a01818"
+        transform="rotate(2.5 8 62)">that still grows</text>
+  <text x="8" y="92" font-family="DkgHandwriting" font-size="24" fill="#12307a"
+        transform="rotate(2.5 8 92)">on odd fibres</text>
+</svg>

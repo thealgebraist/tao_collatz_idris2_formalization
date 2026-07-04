@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
+  <text x="8" y="32" font-family="DkgHandwriting" font-size="26" fill="#a01818"
+        transform="rotate(3 8 32)">the deep part</text>
+  <text x="8" y="62" font-family="DkgHandwriting" font-size="26" fill="#a01818"
+        transform="rotate(3 8 62)">lives here!</text>
+  <text x="8" y="94" font-family="DkgHandwriting" font-size="22" fill="#12307a"
+        transform="rotate(3 8 94)">(Prop 1.9 &amp; 7.8)</text>
+</svg>
