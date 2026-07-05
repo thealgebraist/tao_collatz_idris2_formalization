@@ -56,5 +56,7 @@ modules = TaoCollatz.Core
         , TaoCollatz.StepArith2
         , TaoCollatz.DensityTransfer
         , TaoCollatz.OddToPosTransfer
+        , TaoCollatz.Pieces64
+        , TaoCollatz.DiagonalizationLimit
         , TaoCollatz.HoleProof
 

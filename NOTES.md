@@ -529,3 +529,36 @@ primitive black boxes), so the algebra is checked by the kernel end to end.
 
 Build: `idris2 --build taocollatz.ipkg` (Idris2 0.8.0) — 26/26 modules compile
 from scratch, all `%default total`, no unsafe primitives.
+
+## Iteration: abstract non-reducibility of the step-4 uniformity (piece35)
+
+Added module `TaoCollatz/DiagonalizationLimit.idr` (registered in
+`taocollatz.ipkg`), a fully total, hole-free development that pins down *why*
+`Pieces64.piece35_driftUniformFromFixed` is an irreducibly analytic hole rather
+than a formal one.
+
+`piece35` has the shape "a family of fixed-bound density-one late-witness sets
+upgrades to a single density-one set with a witness past a growing height `f`".
+The module abstracts this shape over an arbitrary boolean predicate
+`p : OddPos -> Nat -> Bool` (`UniformLateWitness p`) and proves it is **false**
+for a concrete choice: with `pDiag y n := (n < oddSize y)` and the growing height
+`f = oddSize`,
+
+* every fixed bound `m` is met on the cofinite (density-one) set
+  `oddSize y > m` (`pDiagFixedFamily`), yet
+* no density-one set can admit a witness index `n >= oddSize y`, since
+  `pDiag y n` forces `n < oddSize y` (`noUniformLateWitnessForPDiag`).
+
+Hence `piece35`'s conclusion does not follow from its hypothesis by the density
+algebra alone; any genuine proof must use the specific arithmetic of the
+Syracuse valuation sums `S_n(y)` (the equidistribution/large-deviation content
+of Tao's paper).  This parallels the earlier `piece58` correction (whose
+fixed-height form was itself impossible); here the concrete `piece35` remains a
+true, open, hard target, and only its abstract schema provably fails.
+
+Supporting content proved from scratch: a structural boolean strict order
+`lessThanB` with its `Leq` bridges (`lessThanBToLeq`, `leqToLessThanB`) and
+`succNotLeqSelf`.  The whole package still builds (`idris2 --build
+taocollatz.ipkg`, 59/59 modules, exit 0), every module stays `%default total`,
+and no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms are
+used.  The four honest holes in `Pieces64` are unchanged.
