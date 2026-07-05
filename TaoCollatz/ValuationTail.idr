@@ -27,6 +27,7 @@ import Data.Nat
 import TaoCollatz.Core
 import TaoCollatz.TwoAdic
 import TaoCollatz.Density
+import TaoCollatz.DensityProperties
 import TaoCollatz.FinMeasure
 import TaoCollatz.TailBound
 import TaoCollatz.GeometricValuation
@@ -45,8 +46,8 @@ massGeShift1 : (t : Nat) -> (d : FinDist) -> massGe (S t) (shift1 d) = massGe t 
 massGeShift1 t Empty = Refl
 massGeShift1 t (Atom v w r) with (decLeq (S t) (S v)) | (decLeq t v)
   _ | IsLeq _ | IsLeq _ = cong (plus w) (massGeShift1 t r)
-  _ | IsLeq (LeqS p) | IsGt q = void (leqSuccAbsurd v (leqTrans q p))
-  _ | IsGt (LeqS p) | IsLeq q = void (leqSuccAbsurd v (leqTrans p q))
+  _ | IsLeq (LeqS p) | IsGt q = void (leqSuccAbsurd (leqTrans q p))
+  _ | IsGt (LeqS p) | IsLeq q = void (leqSuccAbsurd (leqTrans p q))
   _ | IsGt _ | IsGt _ = massGeShift1 t r
 
 --------------------------------------------------------------------------------

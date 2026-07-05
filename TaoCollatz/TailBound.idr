@@ -20,20 +20,15 @@ module TaoCollatz.TailBound
 import Data.Nat
 import TaoCollatz.Core
 import TaoCollatz.Density
+import TaoCollatz.DensityProperties
 import TaoCollatz.FinMeasure
 
 %default total
 
 --------------------------------------------------------------------------------
--- Small `Leq` contradiction helpers.
---------------------------------------------------------------------------------
-
-public export
-leqSuccAbsurd : (n : Nat) -> Leq (S n) n -> Void
-leqSuccAbsurd (S n) (LeqS h) = leqSuccAbsurd n h
-
---------------------------------------------------------------------------------
 -- Tail is additive over the disjoint sum of measures.
+-- (The `Leq (S n) n -> Void` contradiction used below is reused from
+-- `TaoCollatz.DensityProperties.leqSuccAbsurd` -- a single source of truth.)
 --------------------------------------------------------------------------------
 
 public export
@@ -58,7 +53,7 @@ massGeMonoThreshold t1 t2 le Empty = LeqZ
 massGeMonoThreshold t1 t2 le (Atom v w r) with (decLeq t1 v) | (decLeq t2 v)
   _ | IsLeq _ | IsLeq _ = leqAdd (leqRefl w) (massGeMonoThreshold t1 t2 le r)
   _ | IsLeq p1 | IsGt p2 =
-    void (leqSuccAbsurd v (leqTrans p2 (leqTrans le p1)))
+    void (leqSuccAbsurd (leqTrans p2 (leqTrans le p1)))
   _ | IsGt _ | IsLeq _ =
     leqTrans (massGeMonoThreshold t1 t2 le r)
              (leqPlusExtraLeft w (massGe t2 r))

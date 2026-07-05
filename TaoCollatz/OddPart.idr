@@ -2,6 +2,8 @@ module TaoCollatz.OddPart
 
 import TaoCollatz.Core
 import TaoCollatz.Dynamics
+import TaoCollatz.TwoAdic
+import TaoCollatz.SyracuseStructure
 import TaoCollatz.PaperInterfaces
 
 %default total
@@ -29,42 +31,23 @@ halfLe (S Z) = LeqZ
 halfLe (S (S k)) = LeqS (leqTrans (halfLe k) (leqSucc k))
 
 public export
-halfLtSelf : (n : Nat) -> Not (n = 0) -> Leq (S (half n)) n
-halfLtSelf Z nz = absurd (nz Refl)
-halfLtSelf (S Z) _ = LeqS LeqZ
-halfLtSelf (S (S k)) _ = LeqS (LeqS (halfLe k))
-
-public export
 succNonZero : (k : Nat) -> Not (S k = 0)
 succNonZero k Refl impossible
 
+||| A nonzero `Nat` is at least one.  This bridges the `Not (n = 0)` phrasing
+||| used in this module to the `Leq 1 n` phrasing of `TaoCollatz.TwoAdic`.
 public export
-halfNonZero : (n : Nat) -> isEven n = True -> Not (n = 0) -> Not (half n = 0)
-halfNonZero Z ev nz pf = absurd (nz Refl)
-halfNonZero (S Z) ev _ pf = absurd ev
-halfNonZero (S (S k)) _ _ Refl impossible
+nonZeroToPos : (n : Nat) -> Not (n = 0) -> Leq (S Z) n
+nonZeroToPos Z nz = absurd (nz Refl)
+nonZeroToPos (S k) _ = LeqS LeqZ
 
--- Enough fuel is available to reach the odd factor.
-
-public export
-leqHalfFuel :
-  (n : Nat) -> (f : Nat) -> Not (n = 0) -> Leq n (S f) -> Leq (half n) f
-leqHalfFuel n f nz le = leqPredFromSuccLeq (leqTrans (halfLtSelf n nz) le)
-
--- The odd factor of any positive number is odd (with sufficient fuel).
-
-public export
-oddFactorFuelOdd :
-  (fuel : Nat) -> (n : Nat) -> Not (n = 0) -> Leq n fuel ->
-  isEven (oddFactorFuel fuel n) = False
-oddFactorFuelOdd Z n nz le = case le of LeqZ => absurd (nz Refl)
-oddFactorFuelOdd (S f) n nz le with (isEven n) proof evp
-  _ | False = evp
-  _ | True = oddFactorFuelOdd f (half n) (halfNonZero n evp nz) (leqHalfFuel n f nz le)
+-- The odd factor of any positive number is odd.  Rather than re-running the
+-- fuelled induction here, we reuse the single proof in `TaoCollatz.TwoAdic`
+-- (`oddFactorIsOdd`), keeping one source of truth for this fact.
 
 public export
 oddFactorOdd : (n : Nat) -> Not (n = 0) -> isEven (oddFactor n) = False
-oddFactorOdd n nz = oddFactorFuelOdd n n nz (leqRefl n)
+oddFactorOdd n nz = oddFactorIsOdd n (nonZeroToPos n nz)
 
 public export
 plusOneNonZero : (x : Nat) -> Not (x + 1 = 0)
@@ -104,10 +87,12 @@ oddPartValueOdd :
 oddPartValueOdd (MkPos n) nz = oddFactorOdd n nz
 
 -- One Syracuse step always lands on an odd number (no hypothesis needed:
--- `3n+1` is positive for every `n`).
+-- `3n+1` is positive for every `n`).  This is the `OddPos`-packaged form of the
+-- single fact proved in `TaoCollatz.SyracuseStructure` (`syrValueOdd` on `Nat`);
+-- we reuse it here rather than re-deriving it.
 public export
 syrValueOdd : (o : OddPos) -> isEven (oddValue (Syr o)) = False
-syrValueOdd (MkOddPos n) = oddFactorOdd (3 * n + 1) (plusOneNonZero (3 * n))
+syrValueOdd (MkOddPos n) = SyracuseStructure.syrValueOdd n
 
 -- The odd part of a positive number is a fixed point of `oddPart`
 -- (as a bare value): re-extracting the odd factor changes nothing.
