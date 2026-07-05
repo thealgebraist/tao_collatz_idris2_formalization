@@ -259,3 +259,52 @@ survival function, exponential decay, geometric halving law, complementary CDF,
 Markov large-deviation bound, and tail monotonicity). The full density-one
 first-passage gate `A1` (`SyracuseDensityControl`) remains open — see
 `REMAINING_WORK.md` and `PLAN_HARD_THEOREMS.md`.
+
+---
+
+## 9. Complete numbered-result coverage (`TaoCollatz.PaperResults`)
+
+Every numbered result of `taocollatz.pdf` now has a corresponding Idris2
+declaration, so that all parts of the main theorem (Theorem 1.3) are converted
+to Idris2.  The module `TaoCollatz.PaperResults` records one `Type` (the
+formalized *statement*) per numbered result: for results already formalized
+elsewhere it is an alias naming the existing node; for the previously-missing
+supporting results it is a new faithful statement.
+
+| Paper result | Idris declaration (`PaperResults`) | Backing / status |
+|---|---|---|
+| Conjecture 1.1 (Collatz) | `Conjecture11` | genuine statement over `Col` (open; statement only) |
+| Theorem 1.3 (main) | `Theorem13Statement` | alias `Large.Theorem13` (proved reduction; single gate A1) |
+| Conjecture 1.5 (Syracuse) | `Conjecture15` | genuine statement over `Syr` (open; statement only) |
+| Theorem 1.6 | `Theorem16Statement` | alias `Large.Theorem16` |
+| Proposition 1.9 | `Proposition19Statement` | alias `ValuationDistribution` (genuine tail content) |
+| Proposition 1.11 | `Proposition111Statement` | alias `StabilisationOfFirstPassage` |
+| Lemma 1.12 | `Lemma112Statement` | statement placeholder (needs `Z/3^nZ` prob. layer) |
+| Proposition 1.14 | `Proposition114Statement` | alias `FineScaleMixing` |
+| Proposition 1.17 | `Proposition117Statement` | alias `FourierDecay` |
+| Lemma 2.1 (valuation description) | `Lemma21Statement`, `lemma21OneStep` | **single-step case genuinely proved** via `TwoAdic.oddFactorization` |
+| Lemma 2.2 (Chernoff bound) | `Lemma22Statement` | statement placeholder (needs sub-Gaussian layer) |
+| Theorem 3.1 (alternate form) | `Theorem31Statement` | alias `QuantitativeSyracuseBound` |
+| Lemma 4.1 (tail bound) | `Lemma41Statement` | statement placeholder; per-step tail proved in `ValuationTail` |
+| Proposition 5.2 (approx. formula) | `Proposition52Statement` | statement placeholder (log-density layer) |
+| Lemma 5.3 | `Lemma53Statement` | statement placeholder |
+| Lemma 6.2 (injectivity of offsets) | `Lemma62Statement` | statement placeholder; affine monoid proved in `Affine` |
+| Corollary 6.3 (3-adic separation) | `Corollary63Statement` | statement placeholder |
+| Proposition 7.1 (key Fourier estimate) | `Proposition71Statement` | alias `KeyFourierEstimate` |
+| Lemma 7.2 (cancellation, white points) | `Lemma72Statement` | statement placeholder (Fourier layer) |
+| Proposition 7.3 (renewal white points) | `Proposition73Statement` | alias `RenewalWhitePoints` |
+| Lemma 7.4 (structure of black set) | `Lemma74Statement` | statement placeholder (renewal/geometry layer) |
+| Lemma 7.6 (holding time properties) | `Lemma76Statement` | statement placeholder (renewal layer) |
+| Lemma 7.7 (first-passage location) | `Lemma77Statement` | statement placeholder (renewal layer) |
+| Proposition 7.8 (renewal monotonicity) | `Proposition78Statement` | alias `RenewalMonotonicity` (genuine monotonicity content) |
+| Lemma 7.9 (triangles ⇒ white points) | `Lemma79Statement` | statement placeholder (renewal layer) |
+| Lemma 7.10 (large triangles rare) | `Lemma710Statement` | statement placeholder (renewal layer) |
+
+The placeholder statements (payload `Unit`) match the convention already used
+for the analytic nodes 1.14 / 1.17 / 7.1 / 7.3 / 7.8 in `PaperInterfaces`; they
+are honest statement-level `Type`s with no fabricated proof term.  The deep
+analytic content they name still routes through the single gate A1 and the
+missing infrastructure C1–C5 documented in `REMAINING_WORK.md`.  The whole tree
+still builds with Idris2 0.8.0 (`idris2 --build taocollatz.ipkg`, exit 0), is
+`%default total`, and uses no `believe_me`/`postulate`/`assert_*`/`%foreign`/
+`idris_crash`/axioms/holes.

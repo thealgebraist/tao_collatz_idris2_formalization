@@ -58,5 +58,7 @@ modules = TaoCollatz.Core
         , TaoCollatz.OddToPosTransfer
         , TaoCollatz.Pieces64
         , TaoCollatz.DiagonalizationLimit
+        , TaoCollatz.ValuationOneClass
+        , TaoCollatz.PaperResults
         , TaoCollatz.HoleProof
 

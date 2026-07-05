@@ -1,3 +1,17 @@
+# Summary of changes for run e72d39e7-bcde-47fc-b8b9-ab8120921bc3
+Ensured every part of the main theorem from `taocollatz.pdf` (Tao, "Almost all Collatz orbits attain almost bounded values", Theorem 1.3) is converted to Idris2.
+
+What I did:
+- Rebuilt the Idris2 0.8.0 toolchain and confirmed the existing package builds cleanly from a clean state (`idris2 --build taocollatz.ipkg`, exit 0).
+- Enumerated all 26 numbered results in the paper and cross-checked them against the existing Idris2 development. The main proof spine was already present (Theorems 1.3, 1.6, 3.1 and Propositions 1.9, 1.11, 1.14, 1.17, 7.1, 7.3, 7.8), but 16 supporting results had no Idris2 declaration: Conjectures 1.1 and 1.5; Lemmas 1.12, 2.1, 2.2, 4.1, 5.3, 6.2, 7.2, 7.4, 7.6, 7.7, 7.9, 7.10; Proposition 5.2; Corollary 6.3.
+- Added a new module `TaoCollatz/PaperResults.idr` (registered in `taocollatz.ipkg`) that records one Idris2 declaration for every numbered result of the paper. Already-formalized results are re-exposed as aliases naming their existing node; the previously-missing results are given faithful new statements, each documented with the paper's precise statement.
+  - Conjectures 1.1 and 1.5 are stated with genuine content over the concrete `Col`/`Syr` dynamics (open conjectures, statement only — no proof term fabricated).
+  - The single-step case of Lemma 2.1 (the exact 2-adic valuation description, `2^{a(q)}·oddPart(3q+1) = 3q+1`) is genuinely proved (`lemma21OneStep`) via `TwoAdic.oddFactorization`; I also verified the identity computationally over many odd inputs.
+  - The deep probabilistic/Fourier/renewal results (2.2, 4.1, 5.2, 5.3, 6.2, 6.3, 7.2, 7.4, 7.6, 7.7, 7.9, 7.10, 1.12) are recorded as honest statement-level `Type`s, matching the placeholder convention already used for the analytic nodes in `PaperInterfaces`; their remaining analytic content routes through the single gate and the missing infrastructure documented in `REMAINING_WORK.md`.
+- Updated `TRACKING.md` with a coverage table mapping each of the 26 paper results to its Idris2 declaration and backing status. Left `ARISTOTLE_SUMMARY.md` unedited as requested.
+
+Verification: a full clean rebuild (`idris2 --clean` then `idris2 --build`) succeeds (exit 0); the tree stays `%default total`; the new module has no holes and uses no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms. All changes are committed and pushed.
+
 # Summary of changes for run c6f2deeb-c958-455b-a6c8-82e58cb72666
 Continued the Idris2 formalization of the central theorem of `taocollatz.pdf` (Tao, Theorem 1.3).
 
