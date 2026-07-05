@@ -52,5 +52,9 @@ modules = TaoCollatz.Core
         , TaoCollatz.ValuationTail
         , TaoCollatz.GenuineEstimates
         , TaoCollatz.ContractionDrift
+        , TaoCollatz.StepArith
+        , TaoCollatz.StepArith2
+        , TaoCollatz.DensityTransfer
+        , TaoCollatz.OddToPosTransfer
         , TaoCollatz.HoleProof
 

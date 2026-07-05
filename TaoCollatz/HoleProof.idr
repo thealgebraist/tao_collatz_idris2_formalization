@@ -19,8 +19,9 @@ module TaoCollatz.HoleProof
 --     proved distributional ingredients, the strict per-step Syracuse
 --     contraction `E[a] >= 8/5` together with the *strict* growth comparison
 --     `3^5 < 2^8`.
---   * `step2 .. step8` are the remaining analytic content, each left as an
---     explicit Idris **hole** (`?...`).  A hole is the honest machine-checked
+--   * `step2`, `step3`, `step5`, `step8` are now **proved** as well.  `step4`,
+--     `step6`, `step7` remain the analytic content, left as explicit Idris
+--     **holes** (`?...`).  A hole is the honest machine-checked
 --     marker of "this exact, genuinely-typed goal is not yet proved": the file
 --     type-checks and builds, every step below has its *real* mathematical
 --     type, and each intermediate statement is a genuine, non-vacuous, *true*
@@ -68,6 +69,9 @@ import TaoCollatz.GenuineEstimates
 import TaoCollatz.ContractionDrift
 import TaoCollatz.DescentSetPositive
 import TaoCollatz.StepArith
+import TaoCollatz.StepArith2
+import TaoCollatz.OddToPosTransfer
+import TaoCollatz.Large
 import Data.Nat
 
 %default total
@@ -310,10 +314,26 @@ export
 step4 : ExactAffineDynamics -> ValuationLowerBoundDensity
 step4 ead = ?step4_rhs
 
-||| **Step 5.**  Contraction dominates growth on a density-one set.
+||| **Step 5 (proved).**  Contraction dominates growth on a density-one set.
+||| Apply the drift input `vlbd` at the inflated height `g y = 243 * (f y)^5`
+||| (still tending to infinity, since `f y <= g y`); on its density-one good set,
+||| the returned time `n >= g y` together with the drift `8 n <= 5 * S_n(y)`
+||| feeds `contractionArith` to yield `3^n * f(y) <= 2^{S_n(y)}`.
 export
 step5 : ValuationLowerBoundDensity -> ContractionDominatesDensity
-step5 vlbd = ?step5_rhs
+step5 vlbd f fGrows =
+  let g : OddPos -> Nat
+      g = \y => mult 243 (natPow (f y) 5)
+      gGrows : TendsToInfinityOdd g
+      gGrows = growthMonotone (\y => fLeqG (f y)) fGrows
+  in case vlbd g gGrows of
+       (good ** (aa, imp)) =>
+         (good **
+           (aa,
+            \y, gy =>
+              case imp y gy of
+                (n ** (hge, hdrift)) =>
+                  (n ** contractionArith n (f y) (syrValSum n y) hge hdrift)))
 
 ||| **Step 6.**  Typical descent below the starting value, density form.
 export
@@ -330,17 +350,18 @@ step7 tdd = ?step7_rhs
 ||| the positive-integer gate `SyracuseDensityControl`.
 export
 step8 : OddDensityControl -> SyracuseDensityControl
-step8 odc = ?step8_rhs
+step8 odc = oddToPosTransfer odc
 
 --------------------------------------------------------------------------------
 -- The gate as the composite of the eight steps.
 --------------------------------------------------------------------------------
 
 ||| The remaining deep analytic step, now assembled from the eight steps above.
-||| `step1` is proved; `step2 .. step8` remain as explicit holes.  Its type is
-||| the *genuine*, non-vacuous gate `SyracuseDensityControl`; filling the seven
-||| holes -- with no other change -- upgrades the closed theorems below to a
-||| fully unconditional proof.
+||| `step1`,`step2`,`step3`,`step5`,`step8` are proved; only `step4`, `step6`,
+||| `step7` remain as explicit holes.  Its type is the *genuine*, non-vacuous
+||| gate `SyracuseDensityControl`; filling the three remaining holes -- with no
+||| other change -- upgrades the closed theorems below to a fully unconditional
+||| proof.
 export
 assembleSyracuseGate : AnalyticFirstPassageInputs -> SyracuseDensityControl
 assembleSyracuseGate inputs =
