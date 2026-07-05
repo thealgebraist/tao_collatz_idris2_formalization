@@ -1,0 +1,64 @@
+name: Idris2
+
+on:
+  push:
+    paths:
+      - '**/*.idr'
+      - '*.ipkg'
+      - '.github/workflows/idris2.yml'
+  pull_request:
+    paths:
+      - '**/*.idr'
+      - '*.ipkg'
+      - '.github/workflows/idris2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        idris2-version: ['0.8.0']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Install Idris2 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme libgmp-dev g++ make
+
+      - name: Cache Idris2
+        id: cache-idris2
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.idris2
+            ~/idris2-${{ matrix.idris2-version }}
+          key: idris2-${{ runner.os }}-${{ matrix.idris2-version }}
+
+      - name: Install Idris2
+        if: steps.cache-idris2.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch v${{ matrix.idris2-version }} https://github.com/idris-lang/Idris2.git ~/idris2-${{ matrix.idris2-version }}
+          cd ~/idris2-${{ matrix.idris2-version }}
+          make bootstrap SCHEME=scheme
+          make install
+          make install-libs
+
+      - name: Add Idris2 to PATH
+        run: echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+
+      - name: Show Idris2 version
+        run: idris2 --version
+
+      - name: Build taocollatz
+        run: idris2 --build taocollatz.ipkg
