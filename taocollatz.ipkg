@@ -59,6 +59,8 @@ modules = TaoCollatz.Core
         , TaoCollatz.Pieces64
         , TaoCollatz.DiagonalizationLimit
         , TaoCollatz.ValuationOneClass
+        , TaoCollatz.PeriodicResidue
+        , TaoCollatz.ValuationGeometric
         , TaoCollatz.PaperResults
         , TaoCollatz.HoleProof
 

@@ -260,6 +260,72 @@ Markov large-deviation bound, and tail monotonicity). The full density-one
 first-passage gate `A1` (`SyracuseDensityControl`) remains open — see
 `REMAINING_WORK.md` and `PLAN_HARD_THEOREMS.md`.
 
+### 8b. Exact residue-class realisation of the valuation law (`ValuationOneClass`)
+
+The abstract measure `geoValuation` (§8) models `P(a = k) = 2^{-k}`.  The module
+`TaoCollatz.ValuationOneClass` pins the *base atom* `a = 1` of that law onto the
+actual arithmetic, complementing `ValuationTwoClass`/`ValuationDistribution`
+(which handle `a = 2` on `n ≡ 1 (mod 8)`):
+
+| Result | Idris node | Status |
+|---|---|---|
+| Factorisation `3(4t+3)+1 = 2^1·(6t+5)`, `6t+5` odd | `class3mod4Factor`, `oddSixTPlus5` | ✅ Proved |
+| **Exact valuation** `syrValuation (4t+3) = 1` (the event `a = 1`) | `valuationOneOnClass3mod4`, `valuationOneWhenRes3mod4` | ✅ Proved |
+| Period-4 predicate `n ≡ 3 (mod 4)` with density `1/4` | `res3mod4`, `res3mod4Periodic`, `countRes3mod4` | ✅ Proved |
+| **First-step valuation partition** of the odds: `{a=1} ⊔ {a≥2}`, each density `1/4` | `res34UnionIsOdd`, `res3res1Disjoint`, `oddValuationSplitDecomp`, `oddValuationSplitCount` | ✅ Proved |
+
+This gives the exact first-step distribution of the Syracuse valuation over the
+odd numbers (`P(a=1) = P(a≥2) = 1/2`), the leading, arithmetically-realised term
+of the geometric law — a genuine slice of infrastructure items C1/C2. The deep
+multi-step concentration bridge (needed for the density-one drift, gate `A1`)
+remains open.
+
+---
+
+### 8c. Geometric valuation survival law, all `k` (`PeriodicResidue`, `ValuationGeometric`)
+
+The residue-class atoms of §8b are hand-unrolled at fixed periods (`a = 1` at
+period 4, `a = 2` at period 8).  This subsection lifts them to a **single law
+valid for every `k`**, i.e. the arithmetically-realised survival function
+`P(a >= k) = 2^{-k}` of the Syracuse 2-adic valuation random variable.
+
+Two new modules (both `%default total`, no holes / `believe_me` / `postulate` /
+`assert_*` / `%foreign` / `idris_crash` / axioms):
+
+`TaoCollatz.PeriodicResidue` — a general single-residue-class density, for an
+*arbitrary* period `P = S p` (the fixed-period unrollings could not be made
+uniform in `k`):
+
+| Result | Idris node | Status |
+|---|---|---|
+| Successor-mod-`P` counter and its iteration | `nextMod`, `applyNout`, `applyNoutPlus` | ✅ Proved |
+| Ticking within a period is honest addition | `reachP` | ✅ Proved |
+| A full period of ticks returns to start | `cycleReturn` | ✅ Proved |
+| Phase (`n mod P`), identity below the period | `phase`, `phaseSmall` | ✅ Proved |
+| Residue-class indicator `atRes p r`, period `P` | `atRes`, `atResPeriodic` | ✅ Proved |
+| Exactly one member per period (`r < P`) | `countAtResPerPeriod` | ✅ Proved |
+| **Density `1/P`** over full periods | `atResDensity` | ✅ Proved |
+
+`TaoCollatz.ValuationGeometric` — the arithmetic realisation of the survival
+law, uniformly in `k`:
+
+| Result | Idris node | Status |
+|---|---|---|
+| Valuation lower bound from a factorisation `3n+1 = 2^k s`, `s>=1` | `valuationGeFromFactor` | ✅ Proved |
+| **Tail residue** `r_k < 2^k` with `3 r_k + 1 = 2^k s_k` (`s_k>=1`), all `k` | `tailResidue` | ✅ Proved (induction on `k`) |
+| Every `n` decomposes as `n = q*P + (n mod P)` | `phaseDecomp` | ✅ Proved |
+| **Survival law**: a residue class of density exactly `2^{-k}` on which `syrValuation n >= k`, for every `k` | `tailClass` | ✅ Proved |
+| The `a>=1` / `a>=2` atoms as instances | `tailClassOne`, `tailClassTwo` | ✅ Proved |
+
+**Net effect.**  For every `k` there is a genuine residue class (period `2^k`,
+natural density exactly `2^{-k}`) on which the *actual* Syracuse valuation is
+`>= k` — the exact complementary CDF `P(a >= k) = 2^{-k}` of the geometric law,
+realised on the arithmetic (a general slice of infrastructure items C1/C2 of
+`REMAINING_WORK.md`), subsuming the fixed-period `a=1`/`a=2` atoms of §8b.  The
+deep multi-step valuation-sum concentration bridge (needed for the density-one
+drift, gate `A1`, and the four analytic holes `piece34/35/59` of
+`Pieces64`) remains open.
+
 ---
 
 ## 9. Complete numbered-result coverage (`TaoCollatz.PaperResults`)

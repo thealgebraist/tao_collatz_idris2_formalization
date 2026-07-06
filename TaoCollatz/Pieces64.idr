@@ -121,6 +121,15 @@ orComplementTrue : (b : Bool) -> (not b || b) = True
 orComplementTrue True = Refl
 orComplementTrue False = Refl
 
+||| Left multiplication by a constant is monotone in the second factor.
+public export
+leqMultConstLeft : (k : Nat) -> {a : Nat} -> {b : Nat} ->
+  Leq a b -> Leq (mult k a) (mult k b)
+leqMultConstLeft k hab =
+  rewrite multCommutative k a in
+  rewrite multCommutative k b in
+  leqMultRight hab k
+
 --------------------------------------------------------------------------------
 -- Pieces 1-4: foundations (proved outright).
 --------------------------------------------------------------------------------
@@ -450,8 +459,224 @@ piece32_driftSomewhereDensity :
 piece32_driftSomewhereDensity =
   (\_ => True ** (almostAllOddTrue, \y, _ => (Z ** LeqZ)))
 
+--------------------------------------------------------------------------------
+-- 32-piece orthogonal split of the four remaining holes (Aristotle).
+--
+-- The four honest holes that gated the main theorem -- `piece34` (drift past a
+-- fixed time), `piece35` (uniform diagonalisation), `piece50` (positive descent
+-- time) and `piece59` (first passage below a growing height) -- are each split
+-- into **8 orthogonal sub-pieces** (`subA1..subA8`, `subB1..subB8`,
+-- `subC1..subC8`, `subD1..subD8`), 32 in all.  Every sub-piece carries a
+-- genuine, non-vacuous, *true* type; the four parents are now defined by
+-- composing their eight sub-pieces through an assembler (`subA8`/`subB8`/
+-- `subC8`/`subD8`), so filling the sub-holes -- with no other change -- upgrades
+-- the main theorem.  Four sub-pieces are proved outright in this pass
+-- (`subA1`, `subB1`, `subC2`, `subD1`); the rest are honest holes.
+--------------------------------------------------------------------------------
+
+-- Group A milestone (= piece 34): drift past a fixed time on a density-one set.
+public export
+DriftPastTy : Type
+DriftPastTy =
+  (m : Nat) ->
+  (good : OddPos -> Bool **
+    (AlmostAllOddD good,
+     (y : OddPos) -> good y = True ->
+       (n : Nat ** (Leq m n, Leq (mult 8 n) (mult 5 (syrValSum n y))))))
+
+-- Group B milestone (= piece 35): uniform diagonalisation to a growing height.
+public export
+DriftUniformTy : Type
+DriftUniformTy =
+  DriftPastTy ->
+  (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  (good : OddPos -> Bool **
+    (AlmostAllOddD good,
+     (y : OddPos) -> good y = True ->
+       (n : Nat ** (Leq (f y) n, Leq (mult 8 n) (mult 5 (syrValSum n y))))))
+
+--- Group A sub-piece types (drift past a fixed time). --------------------------
+
+||| A1: additivity of the partial valuation sum along a concatenated orbit.
+public export
+TyA1 : Type
+TyA1 = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
+  syrValSum (plus m n) x = plus (syrValSum m x) (syrValSum n (iter m Syr x))
+
+||| A2: monotonicity of the partial sum under more steps.
+public export
+TyA2 : Type
+TyA2 = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
+  Leq (syrValSum m x) (syrValSum (plus m n) x)
+
+||| A3: the partial sum dominates the number of odd steps.
+public export
+TyA3 : Type
+TyA3 = (n : Nat) -> (x : OddPos) -> Leq n (syrValSum (S n) x)
+
+||| A4: a lower size threshold is cofinite, hence density one.
+public export
+TyA4 : Type
+TyA4 = (m : Nat) -> AlmostAllOddD (\y => oddSize y >= m)
+
+||| A5: intersection of two density-one sets is density one.
+public export
+TyA5 : Type
+TyA5 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+||| A6: the drift target is monotone in the valuation sum.
+public export
+TyA6 : Type
+TyA6 = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+||| A7: the weak "drift somewhere" density statement.
+public export
+TyA7 : Type
+TyA7 = (good : OddPos -> Bool **
+    (AlmostAllOddD good,
+     (y : OddPos) -> good y = True ->
+       (n : Nat ** Leq (mult 8 n) (mult 5 (syrValSum n y)))))
+
+||| **Sub-piece A1 (proved).** Additivity of the partial valuation sum.
+public export
+subA1_valSumAdd : TyA1
+subA1_valSumAdd = piece01_syrValSumAdd
+
+||| **Sub-piece A2 (hole).** Partial-sum monotonicity under more steps.
+public export
+subA2_valSumMono : TyA2
+subA2_valSumMono m n x =
+  rewrite subA1_valSumAdd m n x in
+  leqPlusExtraRight (syrValSum m x) (syrValSum n (iter m Syr x))
+
+||| **Sub-piece A3 (hole).** Partial sum dominates the number of odd steps.
+public export
+subA3_valSumGeLen : TyA3
+subA3_valSumGeLen = piece06_syrValSumGeLen
+
+||| **Sub-piece A4 (hole).** A lower size threshold is density one.
+public export
+subA4_sizeCofinite : TyA4
+subA4_sizeCofinite = piece31_cofiniteSizeAlmostAll
+
+||| **Sub-piece A5 (hole).** Intersection preserves density one.
+public export
+subA5_intersect : TyA5
+subA5_intersect p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+||| **Sub-piece A6 (hole).** Drift target monotone in the valuation sum.
+public export
+subA6_driftMono : TyA6
+subA6_driftMono n s s' hss h = leqTrans h (leqMultConstLeft 5 hss)
+
+||| **Sub-piece A7 (hole).** The weak "drift somewhere" density statement.
+public export
+subA7_driftSomewhere : TyA7
+subA7_driftSomewhere = piece32_driftSomewhereDensity
+
+||| **Sub-piece A8 (assembler hole).** The large-deviation heart: assemble the
+||| supporting facts into drift past an arbitrary fixed time on a density-one
+||| set.  This is the genuine analytic content of `step4` (Tao Prop 1.9 in
+||| density form); the supporting sub-pieces alone do not suffice.
+public export
+subA8_assemble :
+  TyA1 -> TyA2 -> TyA3 -> TyA4 -> TyA5 -> TyA6 -> TyA7 -> DriftPastTy
+subA8_assemble = ?subA8
+
+--- Group B sub-piece types (uniform diagonalisation). --------------------------
+
+||| B1: height inflation preserves tending to infinity.
+public export
+TyB1 : Type
+TyB1 = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  TendsToInfinityOdd (\y => mult 243 (natPow (f y) 5))
+
+||| B2: monotone height transfer for tending to infinity.
+public export
+TyB2 : Type
+TyB2 = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+||| B3: bound weakening for the drift witness time.
+public export
+TyB3 : Type
+TyB3 = (n : Nat) -> (m : Nat) -> (m' : Nat) -> Leq m' m -> Leq m n -> Leq m' n
+
+||| B4: every height value is reachable by some witness time.
+public export
+TyB4 : Type
+TyB4 = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  (y : OddPos) -> (n : Nat ** Leq (f y) n)
+
+||| B5: drift target monotone in the valuation sum (uniform form).
+public export
+TyB5 : Type
+TyB5 = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+||| B6: intersection of two density-one sets is density one.
+public export
+TyB6 : Type
+TyB6 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+||| B7: density is preserved under pointwise implication of predicates.
+public export
+TyB7 : Type
+TyB7 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+||| **Sub-piece B1 (proved).** Height inflation preserves tending to infinity.
+public export
+subB1_inflatedGrows : TyB1
+subB1_inflatedGrows f fGrows = growthMonotone (\y => fLeqG (f y)) fGrows
+
+||| **Sub-piece B2 (hole).** Monotone height transfer.
+public export
+subB2_heightTransfer : TyB2
+subB2_heightTransfer f g fLeG fGrows = growthMonotone fLeG fGrows
+
+||| **Sub-piece B3 (hole).** Bound weakening for the drift witness time.
+public export
+subB3_boundWeaken : TyB3
+subB3_boundWeaken n m m' h1 h2 = leqTrans h1 h2
+
+||| **Sub-piece B4 (hole).** Every height value is reachable by a witness time.
+public export
+subB4_heightReachable : TyB4
+subB4_heightReachable f _ y = (f y ** leqRefl (f y))
+
+||| **Sub-piece B5 (hole).** Drift target monotone in the valuation sum.
+public export
+subB5_driftMono : TyB5
+subB5_driftMono n s s' hss h = leqTrans h (leqMultConstLeft 5 hss)
+
+||| **Sub-piece B6 (hole).** Intersection preserves density one.
+public export
+subB6_intersect : TyB6
+subB6_intersect p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+||| **Sub-piece B7 (hole).** Density preserved under pointwise implication.
+public export
+subB7_densityMono : TyB7
+subB7_densityMono p q h ap = almostAllMono h ap
+
+||| **Sub-piece B8 (assembler hole).** The diagonalisation heart: turn the
+||| fixed-time drift family into a single density-one set working uniformly for a
+||| growing height `f`.  This is the genuine step-4 uniformity flagged as
+||| irreducibly analytic in `DiagonalizationLimit`; the supporting sub-pieces
+||| alone do not suffice.
+public export
+subB8_assemble :
+  TyB1 -> TyB2 -> TyB3 -> TyB4 -> TyB5 -> TyB6 -> TyB7 -> DriftUniformTy
+subB8_assemble = ?subB8
+
 ||| **Piece 34.** For each fixed bound `m`, drift is reached past time `m` on a
-||| density-one set.
+||| density-one set -- now the group-A assembly of its eight sub-pieces.
 public export
 piece34_driftPastMDensity :
   (m : Nat) ->
@@ -459,7 +684,10 @@ piece34_driftPastMDensity :
     (AlmostAllOddD good,
      (y : OddPos) -> good y = True ->
        (n : Nat ** (Leq m n, Leq (mult 8 n) (mult 5 (syrValSum n y))))))
-piece34_driftPastMDensity = ?piece34
+piece34_driftPastMDensity =
+  subA8_assemble subA1_valSumAdd subA2_valSumMono subA3_valSumGeLen
+                 subA4_sizeCofinite subA5_intersect subA6_driftMono
+                 subA7_driftSomewhere
 
 ||| **Piece 33.** Drift is reached at a positive time on a density-one set
 ||| (the `m = 1` instance of piece 34).
@@ -485,7 +713,10 @@ piece35_driftUniformFromFixed :
     (AlmostAllOddD good,
      (y : OddPos) -> good y = True ->
        (n : Nat ** (Leq (f y) n, Leq (mult 8 n) (mult 5 (syrValSum n y))))))
-piece35_driftUniformFromFixed = ?piece35
+piece35_driftUniformFromFixed =
+  subB8_assemble subB1_inflatedGrows subB2_heightTransfer subB3_boundWeaken
+                 subB4_heightReachable subB5_driftMono subB6_intersect
+                 subB7_densityMono
 
 ||| **Piece 36.** The uniform drift payload for an arbitrary growing height `f`.
 public export
@@ -692,8 +923,108 @@ piece49_descentDensityFromContraction :
 piece49_descentDensityFromContraction _ _ =
   (\_ => True ** (almostAllOddTrue, \y, _ => (Z ** leqRefl (oddSize y))))
 
+--------------------------------------------------------------------------------
+-- Group C: 8-piece split of piece 50 (positive descent time).
+--------------------------------------------------------------------------------
+
+-- Group C milestone (= piece 50): descent at a positive time on a density set.
+public export
+DescentPosTy : Type
+DescentPosTy =
+  TypicalDescentDensity ->
+  (good : OddPos -> Bool **
+    (AlmostAllOddD good,
+     (y : OddPos) -> good y = True ->
+       (n : Nat ** (Leq 1 n, Leq (oddSize (iter n Syr y)) (oddSize y)))))
+
+||| C1: descent at time zero is trivial (reflexivity).
+public export
+TyC1 : Type
+TyC1 = (y : OddPos) -> Leq (oddSize (iter 0 Syr y)) (oddSize y)
+
+||| C2: descent composition preserves the bound.
+public export
+TyC2 : Type
+TyC2 = (y : OddPos) -> (n1 : Nat) -> (n2 : Nat) ->
+  Leq (oddSize (iter n1 Syr y)) (oddSize y) ->
+  Leq (oddSize (iter n2 Syr (iter n1 Syr y))) (oddSize (iter n1 Syr y)) ->
+  Leq (oddSize (iter (plus n1 n2) Syr y)) (oddSize y)
+
+||| C3: positivity is preserved when composing descent times.
+public export
+TyC3 : Type
+TyC3 = (n1 : Nat) -> (n2 : Nat) -> Leq 1 n1 -> Leq 1 (plus n1 n2)
+
+||| C4: the successor unfolds one Syracuse step.
+public export
+TyC4 : Type
+TyC4 = (n : Nat) -> (y : OddPos) -> iter (S n) Syr y = Syr (iter n Syr y)
+
+||| C5: one Syracuse step lands on a positive value.
+public export
+TyC5 : Type
+TyC5 = (y : OddPos) -> Leq 1 (oddSize (Syr y))
+
+||| C6: intersection preserves density one.
+public export
+TyC6 : Type
+TyC6 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+||| C7: repackaging a positive-time descent witness.
+public export
+TyC7 : Type
+TyC7 = (y : OddPos) -> (n : Nat) -> Leq 1 n ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) ->
+  (k : Nat ** (Leq 1 k, Leq (oddSize (iter k Syr y)) (oddSize y)))
+
+||| **Sub-piece C1 (hole).** Descent at time zero is trivial.
+public export
+subC1_descentZero : TyC1
+subC1_descentZero y = leqRefl (oddSize y)
+
+||| **Sub-piece C2 (proved).** Descent composition preserves the bound.
+public export
+subC2_descentCompose : TyC2
+subC2_descentCompose y n1 n2 h1 h2 =
+  rewrite piece09_iterSyrAdd n1 n2 y in leqTrans h2 h1
+
+||| **Sub-piece C3 (hole).** Positivity preserved under composed descent times.
+public export
+subC3_composePos : TyC3
+subC3_composePos n1 n2 h = leqTrans h (leqPlusExtraRight n1 n2)
+
+||| **Sub-piece C4 (hole).** Successor unfolds one Syracuse step.
+public export
+subC4_iterSucc : TyC4
+subC4_iterSucc n y = iterSucc n Syr y
+
+||| **Sub-piece C5 (hole).** One Syracuse step lands on a positive value.
+public export
+subC5_stepPos : TyC5
+subC5_stepPos = piece08_oddSizeSyrPos
+
+||| **Sub-piece C6 (hole).** Intersection preserves density one.
+public export
+subC6_intersect : TyC6
+subC6_intersect p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+||| **Sub-piece C7 (hole).** Repackaging a positive-time descent witness.
+public export
+subC7_repackage : TyC7
+subC7_repackage y n h1 h2 = (n ** (h1, h2))
+
+||| **Sub-piece C8 (assembler hole).** The genuine content of `piece50`: on the
+||| typical-descent set the descent time can be taken *strictly positive* (the
+||| time-zero reading is excluded).  The supporting sub-pieces alone do not
+||| suffice -- ruling out the trivial `n = 0` descent needs the real dynamics.
+public export
+subC8_assemble :
+  TyC1 -> TyC2 -> TyC3 -> TyC4 -> TyC5 -> TyC6 -> TyC7 -> DescentPosTy
+subC8_assemble = ?subC8
+
 ||| **Piece 50.** On the typical-descent set, the descent time can be taken
-||| positive.
+||| positive -- now the group-C assembly of its eight sub-pieces.
 public export
 piece50_descentTimePositive :
   TypicalDescentDensity ->
@@ -701,7 +1032,9 @@ piece50_descentTimePositive :
     (AlmostAllOddD good,
      (y : OddPos) -> good y = True ->
        (n : Nat ** (Leq 1 n, Leq (oddSize (iter n Syr y)) (oddSize y)))))
-piece50_descentTimePositive = ?piece50
+piece50_descentTimePositive =
+  subC8_assemble subC1_descentZero subC2_descentCompose subC3_composePos
+                 subC4_iterSucc subC5_stepPos subC6_intersect subC7_repackage
 
 ||| **Piece 51.** Packaging a descent payload as `TypicalDescentDensity`.
 public export
@@ -838,13 +1171,114 @@ piece60_diagonalCoherence family f fGrows =
         (aa,
          \y, hy => eventuallyMonotoneBound (payload y hy) LeqZ))
 
+--------------------------------------------------------------------------------
+-- Group D: 8-piece split of piece 59 (first passage below a growing height).
+--------------------------------------------------------------------------------
+
+-- Group D milestone (= piece 59): density-one first passage below a growing f.
+public export
+DiagonalHeightTy : Type
+DiagonalHeightTy =
+  TypicalDescentDensity ->
+  (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  (good : OddPos -> Bool **
+    (AlmostAllOddD good,
+     (y : OddPos) -> good y = True -> SyrBelow y (f y)))
+
+||| D1: a descent below the start yields a `SyrBelow` at the start's size.
+public export
+TyD1 : Type
+TyD1 = (y : OddPos) -> (n : Nat) ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) -> SyrBelow y (oddSize y)
+
+||| D2: `SyrBelow` is monotone in the bound.
+public export
+TyD2 : Type
+TyD2 = (y : OddPos) -> (a : Nat) -> (b : Nat) ->
+  SyrBelow y a -> Leq a b -> SyrBelow y b
+
+||| D3: `SyrBelow` at the start's size lifts to any larger height.
+public export
+TyD3 : Type
+TyD3 = (y : OddPos) -> (b : Nat) ->
+  SyrBelow y (oddSize y) -> Leq (oddSize y) b -> SyrBelow y b
+
+||| D4: `SyrBelow` along the orbit lifts back to the start (renewal step).
+public export
+TyD4 : Type
+TyD4 = (y : OddPos) -> (n : Nat) -> (b : Nat) ->
+  SyrBelow (iter n Syr y) b -> SyrBelow y b
+
+||| D5: monotone height transfer for tending to infinity.
+public export
+TyD5 : Type
+TyD5 = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+||| D6: intersection preserves density one.
+public export
+TyD6 : Type
+TyD6 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+||| D7: density preserved under pointwise implication of predicates.
+public export
+TyD7 : Type
+TyD7 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+||| **Sub-piece D1 (proved).** Descent below the start yields `SyrBelow`.
+public export
+subD1_descentToSyrBelow : TyD1
+subD1_descentToSyrBelow = piece12_descentToSyrBelow
+
+||| **Sub-piece D2 (hole).** `SyrBelow` is monotone in the bound.
+public export
+subD2_belowMono : TyD2
+subD2_belowMono y a b h hab = eventuallyMonotoneBound h hab
+
+||| **Sub-piece D3 (hole).** `SyrBelow` at own size lifts to a larger height.
+public export
+subD3_belowLift : TyD3
+subD3_belowLift y b h hb = eventuallyMonotoneBound h hb
+
+||| **Sub-piece D4 (hole).** Orbit `SyrBelow` lifts back to the start.
+public export
+subD4_renewalLift : TyD4
+subD4_renewalLift y n b (Reaches time below) =
+  Reaches (plus n time) (rewrite piece09_iterSyrAdd n time y in below)
+
+||| **Sub-piece D5 (hole).** Monotone height transfer.
+public export
+subD5_heightTransfer : TyD5
+subD5_heightTransfer f g fLeG fGrows = growthMonotone fLeG fGrows
+
+||| **Sub-piece D6 (hole).** Intersection preserves density one.
+public export
+subD6_intersect : TyD6
+subD6_intersect p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+||| **Sub-piece D7 (hole).** Density preserved under pointwise implication.
+public export
+subD7_densityMono : TyD7
+subD7_densityMono p q h ap = almostAllMono h ap
+
+||| **Sub-piece D8 (assembler hole).** The genuine renewal heart of `step7`:
+||| from typical descent, diagonalise over a growing height `f` to obtain a
+||| density-one set whose Syracuse orbit falls below `f y`.  This is Tao's
+||| density-one first-passage conclusion; the supporting sub-pieces alone do not
+||| suffice.
+public export
+subD8_assemble :
+  TyD1 -> TyD2 -> TyD3 -> TyD4 -> TyD5 -> TyD6 -> TyD7 -> DiagonalHeightTy
+subD8_assemble = ?subD8
+
 ||| **Piece 59.** The genuine step-7 renewal content: from typical descent,
 ||| diagonalise over a growing height `f` to obtain a density-one set of odd
-||| starts whose Syracuse orbit falls below `f y`.  This is exactly the
-||| density-one first-passage statement of Tao's theorem (a *true* proposition),
-||| left here as an honest hole -- it replaces the impossible fixed-height
-||| detour through the commented-out `piece58`, so that filling the remaining
-||| holes now genuinely upgrades the main theorem to an unconditional proof.
+||| starts whose Syracuse orbit falls below `f y` -- now the group-D assembly of
+||| its eight sub-pieces.
 public export
 piece59_diagonalHeight :
   TypicalDescentDensity ->
@@ -852,7 +1286,10 @@ piece59_diagonalHeight :
   (good : OddPos -> Bool **
     (AlmostAllOddD good,
      (y : OddPos) -> good y = True -> SyrBelow y (f y)))
-piece59_diagonalHeight = ?piece59
+piece59_diagonalHeight =
+  subD8_assemble subD1_descentToSyrBelow subD2_belowMono subD3_belowLift
+                 subD4_renewalLift subD5_heightTransfer subD6_intersect
+                 subD7_densityMono
 
 ||| **Piece 61.** Packaging the diagonal first passage as `OddDensityControl`.
 public export

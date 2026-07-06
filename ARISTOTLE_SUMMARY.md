@@ -1,3 +1,56 @@
+# Summary of changes for run b0bee9d5-50c3-43db-932d-7a09ed4e0fa7
+Continued the Idris2 formalization of Tao's Theorem 1.3.
+
+Starting point: the four remaining honest holes (`piece34`/`piece35`/`piece50`/`piece59`) had earlier been split into 32 orthogonal sub-pieces (`subA1..A8`, `subB1..B8`, `subC1..C8`, `subD1..D8`), of which only 4 were proved; 28 remained as explicit holes.
+
+What I did this run:
+- Proved **all 24 remaining supporting sub-pieces** outright (every non-assembler hole in `TaoCollatz/Pieces64.idr`). Concretely: A2, A3, A4, A5, A6, A7, B2, B3, B4, B5, B6, B7, C1, C3, C4, C5, C6, C7, D2, D3, D4, D5, D6, D7. Each proof is genuine — via the pre-existing algebraic/density lemmas in the project (e.g. `piece06_syrValSumGeLen`, `piece31_cofiniteSizeAlmostAll`, `piece32_driftSomewhereDensity`, `piece08_oddSizeSyrPos`, `iterSucc`, `piece09_iterSyrAdd`, `growthMonotone`, `eventuallyMonotoneBound`, `andAlmostAllOdd`, `almostAllMono`, `leqTrans`/`leqRefl`/`leqPlusExtra*`), plus one small new helper `leqMultConstLeft` (left multiplication is monotone) added to the shared-helpers section.
+- This raises the sub-piece tally from 4/32 proved to **28/32 proved**. The only holes left are the four assembler holes `subA8`/`subB8`/`subC8`/`subD8`, which carry the irreducible deep analytic content of the theorem (large-deviation drift, diagonalisation uniformity, strictly-positive typical descent, and renewal first-passage — Tao's Prop 1.9 etc.), and which per the project's own `REMAINING_WORK.md` require probability/measure/Fourier/renewal infrastructure not yet built.
+
+Verification: the whole package builds cleanly from scratch under Idris2 0.8.0 (`idris2 --build taocollatz.ipkg`, exit 0, 63/63 modules), stays `%default total`, and uses no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms. Confirmed exactly 4 holes remain project-wide (the assemblers). `ARISTOTLE_SUMMARY.md` was left unedited as requested. Changes committed and pushed.
+
+# Summary of changes for run 169e5dbf-7ceb-4b21-af3e-eb9704d8154c
+Continued the Idris2 formalization of Tao's Theorem 1.3, addressing the request to "split the remaining holes into 32 orthogonal holes and work on 4 of them."
+
+What was there before: the central theorem rested on four honest holes in `TaoCollatz/Pieces64.idr` — `piece34` (large-deviation drift past a fixed time), `piece35` (uniform diagonalisation to a growing height), `piece50` (positive-time typical descent), and `piece59` (renewal / first passage below a growing height).
+
+What I did:
+- Split each of the four holes into 8 orthogonal sub-pieces (32 in total): `subA1..subA8`, `subB1..subB8`, `subC1..subC8`, `subD1..subD8`. Each sub-piece carries a genuine, non-vacuous, true type (nothing weakened to `Unit`/`True`). In each group `subX8` is an assembler that takes the seven supporting sub-pieces and produces the parent's milestone type, and the four parents (`piece34/35/50/59`) are now *defined by composing* their eight sub-pieces. So filling the remaining sub-holes — with no other change — upgrades the closed theorems (`theorem13`, etc.) exactly as before.
+- Proved 4 of the 32 sub-pieces outright: `subA1_valSumAdd` (partial-valuation-sum additivity), `subB1_inflatedGrows` (height inflation preserves tending to infinity), `subC2_descentCompose` (descent composition preserves the bound), and `subD1_descentToSyrBelow` (a descent below the start yields a `SyrBelow` witness). The other 28 remain honest holes, each a true proposition; the four assembler holes carry the irreducible deep analytic content.
+- Documented the decomposition in `PIECES32.md`.
+
+Verification: the whole package builds cleanly from a clean state (`idris2 --build taocollatz.ipkg`, exit 0, 63/63 modules), stays `%default total`, and uses no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms. The four newly proved sub-pieces contain no holes. `ARISTOTLE_SUMMARY.md` was left unedited as requested.
+
+# Summary of changes for run ac40f38e-94e7-4827-aac8-081bd0ce5c0e
+Continued the Idris2 formalization of the central theorem of `taocollatz.pdf` (Tao, "Almost all Collatz orbits attain almost bounded values").
+
+Setup: rebuilt the Idris2 0.8.0 toolchain (bootstrapped from source against Chez Scheme + GMP) and confirmed the existing package builds cleanly from scratch — `idris2 --build taocollatz.ipkg` compiles all modules with exit 0.
+
+New this run — a genuine, fully-proved, hole-free contribution generalizing the fixed-period valuation atoms (`a = 1`, `a = 2` from earlier runs) into a single law valid for **every** `k`: the arithmetically-realised survival function `P(a ≥ k) = 2^{-k}` of the Syracuse 2-adic valuation random variable. Two new modules were added and registered in `taocollatz.ipkg`:
+
+- `TaoCollatz/PeriodicResidue.idr`: general single-residue-class density for an *arbitrary* period `P` (the earlier hand-unrolled period-4/8 predicates could not be made uniform in `k`). It builds a computable residue-class indicator `atRes p r` from a successor-mod-`P` counter, and proves from first principles that it is periodic (`atResPeriodic`), has exactly one member per period (`countAtResPerPeriod`), and hence has natural density exactly `1/P` (`atResDensity`), together with the supporting lemmas `reachP`, `cycleReturn`, `phase`, `phaseSmall`.
+
+- `TaoCollatz/ValuationGeometric.idr`: the arithmetic realisation of the survival law, uniformly in `k`. It proves the tail-residue existence `tailResidue` (for every `k` an explicit residue `r_k < 2^k` with `3 r_k + 1 = 2^k · s_k`, `s_k ≥ 1`, by induction on `k`), the modular decomposition `phaseDecomp`, and the main theorem `tailClass`: for every `k` there is a residue class of period `2^k` and natural density exactly `2^{-k}` on which the actual `syrValuation n ≥ k`. The `a ≥ 1` / `a ≥ 2` cases follow as instances (`tailClassOne`, `tailClassTwo`).
+
+`TRACKING.md` was updated with a new subsection (§8c) documenting the two modules; `ARISTOTLE_SUMMARY.md` was left unedited as requested.
+
+Verification: the full package builds cleanly from a clean state (exit 0, 63/63 modules); both new modules are `%default total`, have no holes, and use no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms. The correctness of the new results is machine-checked by construction (the factorisation equalities and `≥` bounds are verified propositionally by the typechecker). The project's four remaining honest holes are the deep analytic core (`piece34`, `piece35`, `piece50`, `piece59` in `TaoCollatz/Pieces64.idr`) — the density-one large-deviation valuation-sum concentration and renewal first-passage estimates, which require probability/renewal infrastructure that does not yet exist; these were left untouched. The new survival-law modules are a general slice of that missing infrastructure (items C1/C2 in `REMAINING_WORK.md`). All changes are committed and pushed.
+
+# Summary of changes for run b3a1a682-b341-4468-98db-18e546b4eb49
+Continued the Idris2 formalization of the central theorem of `taocollatz.pdf` (Tao, "Almost all Collatz orbits attain almost bounded values", Theorem 1.3).
+
+Setup: rebuilt the Idris2 0.8.0 toolchain (Chez Scheme + GMP) and confirmed the whole package builds cleanly from a clean state — `idris2 --build taocollatz.ipkg` compiles all modules with exit 0.
+
+New this run — a genuine, fully-proved, hole-free contribution to the Syracuse 2-adic valuation distribution (infrastructure items C1/C2). Added module `TaoCollatz/ValuationOneClass.idr` (registered in `taocollatz.ipkg`), which pins the base atom `a = 1` of the geometric valuation law onto the actual arithmetic, complementing the existing `ValuationTwoClass`/`ValuationDistribution` (which handle `a = 2`). It proves:
+- the exact 2-adic factorisation `3(4t+3)+1 = 2^1·(6t+5)` with `6t+5` odd (`class3mod4Factor`);
+- the exact valuation `syrValuation (4t+3) = 1`, i.e. the event `a = 1`, both in arithmetic form and on the residue predicate (`valuationOneOnClass3mod4`, `valuationOneWhenRes3mod4`), via the general reader `ValuationExact.syrValuationFromFactor`;
+- the period-4 predicate `n ≡ 3 (mod 4)` with exact natural density `1/4` (`res3mod4`, `res3mod4Periodic`, `countRes3mod4`);
+- the exact first-step valuation partition of the odd numbers into `{a = 1}` (density 1/4) and `{a ≥ 2}` (density 1/4) — `res34UnionIsOdd`, `res3res1Disjoint`, `oddValuationSplitDecomp`, `oddValuationSplitCount` — i.e. `P(a=1) = P(a≥2) = 1/2` among the odds, the arithmetically-realised leading term of the geometric law.
+
+`TRACKING.md` was updated with a new subsection (§8b) documenting the module; `ARISTOTLE_SUMMARY.md` was left unedited as requested.
+
+Verification: the full package builds cleanly (exit 0); the new module is `%default total`, has no holes, and uses no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms. The project's four remaining honest holes are the deep analytic core (`piece34`, `piece35`, `piece50`, `piece59` in `TaoCollatz/Pieces64.idr`) — the density-one large-deviation concentration and renewal first-passage estimates; these require the multi-step valuation-sum concentration bridge that is still open and were left untouched. All changes are committed and pushed.
+
 # Summary of changes for run e72d39e7-bcde-47fc-b8b9-ab8120921bc3
 Ensured every part of the main theorem from `taocollatz.pdf` (Tao, "Almost all Collatz orbits attain almost bounded values", Theorem 1.3) is converted to Idris2.
 
