@@ -63,4 +63,9 @@ modules = TaoCollatz.Core
         , TaoCollatz.ValuationGeometric
         , TaoCollatz.PaperResults
         , TaoCollatz.HoleProof
+        , TaoCollatz.OrbitValuationTwoStep
+        , TaoCollatz.OrbitValuationThreeStep
+        , TaoCollatz.OrbitValuationKStep
+        , TaoCollatz.OrbitValuationDrift
+        , TaoCollatz.OrbitValuationExactOrbit
 

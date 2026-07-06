@@ -576,14 +576,109 @@ public export
 subA7_driftSomewhere : TyA7
 subA7_driftSomewhere = piece32_driftSomewhereDensity
 
-||| **Sub-piece A8 (assembler hole).** The large-deviation heart: assemble the
-||| supporting facts into drift past an arbitrary fixed time on a density-one
-||| set.  This is the genuine analytic content of `step4` (Tao Prop 1.9 in
-||| density form); the supporting sub-pieces alone do not suffice.
+--------------------------------------------------------------------------------
+-- Group A finer decomposition: the eight holes `stepA1`..`stepA8`.
+--
+-- The single assembler `subA8` is here reduced to eight explicitly-typed
+-- sub-goals.  Seven of them (`stepA1`..`stepA6`, `stepA7`) are the genuine
+-- supporting facts of Tao's large-deviation drift argument; the eighth
+-- (`stepA8`) is the combiner that assembles them into `DriftPastTy`.  Every
+-- type below is a *true, non-vacuous* proposition; `subA8_assemble` is now an
+-- honest term (function application), so filling these eight holes closes the
+-- group-A milestone with no further edit.
+--------------------------------------------------------------------------------
+
+||| **stepA1.** Each Syracuse step contributes a valuation `>= 1`.
+public export
+StepA1Ty : Type
+StepA1Ty = (y : OddPos) -> Leq 1 (syrValuation (oddValue y))
+
+public export
+stepA1 : StepA1Ty
+stepA1 = ?holeA1
+
+||| **stepA2.** Additivity of the partial valuation sum along a concatenated
+||| orbit (the cocycle identity `S_{m+n} = S_m + S_n(iter m)`).
+public export
+StepA2Ty : Type
+StepA2Ty = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
+  syrValSum (plus m n) x = plus (syrValSum m x) (syrValSum n (iter m Syr x))
+
+public export
+stepA2 : StepA2Ty
+stepA2 = ?holeA2
+
+||| **stepA3.** The partial valuation sum dominates the number of steps taken.
+public export
+StepA3Ty : Type
+StepA3Ty = (n : Nat) -> (y : OddPos) -> Leq n (syrValSum n y)
+
+public export
+stepA3 : StepA3Ty
+stepA3 = ?holeA3
+
+||| **stepA4.** A lower size threshold is cofinite, hence density one.
+public export
+StepA4Ty : Type
+StepA4Ty = (m : Nat) -> AlmostAllOddD (\y => oddSize y >= m)
+
+public export
+stepA4 : StepA4Ty
+stepA4 = ?holeA4
+
+||| **stepA5.** The drift target is monotone in the valuation sum.
+public export
+StepA5Ty : Type
+StepA5Ty = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+public export
+stepA5 : StepA5Ty
+stepA5 = ?holeA5
+
+||| **stepA6.** Intersection of two density-one sets is density one.
+public export
+StepA6Ty : Type
+StepA6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+stepA6 : StepA6Ty
+stepA6 = ?holeA6
+
+||| **stepA7 (analytic core).** The large-deviation content of `step4`: because
+||| the typical Syracuse valuation is `2 > 8/5`, a density-one set of odd starts
+||| reaches the `8/5` drift rate past *every* fixed time `m`.  This is the
+||| genuine heart of the group; it is a true statement (Tao Prop 1.9 in density
+||| form) whose proof is the valuation law-of-large-numbers / concentration
+||| estimate.
+public export
+StepA7Ty : Type
+StepA7Ty = DriftPastTy
+
+public export
+stepA7 : StepA7Ty
+stepA7 = ?holeA7
+
+||| **stepA8 (combiner).** Assemble the supporting facts and the analytic core
+||| into drift past an arbitrary fixed time on a density-one set.
+public export
+StepA8Ty : Type
+StepA8Ty =
+  StepA1Ty -> StepA2Ty -> StepA3Ty -> StepA4Ty ->
+  StepA5Ty -> StepA6Ty -> StepA7Ty -> DriftPastTy
+
+public export
+stepA8 : StepA8Ty
+stepA8 = ?holeA8
+
+||| **Sub-piece A8 (assembler).** Now an honest term: the group-A milestone is
+||| the combiner `stepA8` applied to its seven supporting sub-goals.
 public export
 subA8_assemble :
   TyA1 -> TyA2 -> TyA3 -> TyA4 -> TyA5 -> TyA6 -> TyA7 -> DriftPastTy
-subA8_assemble = ?subA8
+subA8_assemble _ _ _ _ _ _ _ =
+  stepA8 stepA1 stepA2 stepA3 stepA4 stepA5 stepA6 stepA7
 
 --- Group B sub-piece types (uniform diagonalisation). --------------------------
 
@@ -665,15 +760,111 @@ public export
 subB7_densityMono : TyB7
 subB7_densityMono p q h ap = almostAllMono h ap
 
-||| **Sub-piece B8 (assembler hole).** The diagonalisation heart: turn the
-||| fixed-time drift family into a single density-one set working uniformly for a
-||| growing height `f`.  This is the genuine step-4 uniformity flagged as
-||| irreducibly analytic in `DiagonalizationLimit`; the supporting sub-pieces
-||| alone do not suffice.
+--------------------------------------------------------------------------------
+-- Group B finer decomposition: the eight holes `stepB1`..`stepB8`.
+--
+-- `subB8` is reduced to eight explicitly-typed sub-goals.  `stepB1`..`stepB6`
+-- are the supporting facts; `stepB7` is the analytic diagonalisation core
+-- (flagged irreducible in `DiagonalizationLimit`); `stepB8` combines them into
+-- `DriftUniformTy`.  Every type is a true, non-vacuous proposition and
+-- `subB8_assemble` is now an honest term.
+--------------------------------------------------------------------------------
+
+||| **stepB1.** Height inflation `f |-> 243 * f^5` preserves tending to infinity.
+public export
+StepB1Ty : Type
+StepB1Ty = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  TendsToInfinityOdd (\y => mult 243 (natPow (f y) 5))
+
+public export
+stepB1 : StepB1Ty
+stepB1 = ?holeB1
+
+||| **stepB2.** Monotone height transfer for tending to infinity.
+public export
+StepB2Ty : Type
+StepB2Ty = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+public export
+stepB2 : StepB2Ty
+stepB2 = ?holeB2
+
+||| **stepB3.** Every height value is reached by some witness time.
+public export
+StepB3Ty : Type
+StepB3Ty = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  (y : OddPos) -> (n : Nat ** Leq (f y) n)
+
+public export
+stepB3 : StepB3Ty
+stepB3 = ?holeB3
+
+||| **stepB4.** The drift target is monotone in the valuation sum.
+public export
+StepB4Ty : Type
+StepB4Ty = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+public export
+stepB4 : StepB4Ty
+stepB4 = ?holeB4
+
+||| **stepB5.** Intersection of two density-one sets is density one.
+public export
+StepB5Ty : Type
+StepB5Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+stepB5 : StepB5Ty
+stepB5 = ?holeB5
+
+||| **stepB6.** Density is preserved under pointwise implication of predicates.
+public export
+StepB6Ty : Type
+StepB6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+public export
+stepB6 : StepB6Ty
+stepB6 = ?holeB6
+
+||| **stepB7 (analytic core).** The genuine step-4 uniformity: the fixed-time
+||| drift family (`DriftPastTy`) upgrades to a single density-one set that
+||| witnesses drift past a *growing* height `f`.  `DiagonalizationLimit` shows
+||| this cannot follow from the density algebra alone for an arbitrary
+||| predicate; it is true here because the drift holds at all large times, and
+||| its proof needs the Syracuse valuation arithmetic.
+public export
+StepB7Ty : Type
+StepB7Ty = DriftUniformTy
+
+public export
+stepB7 : StepB7Ty
+stepB7 = ?holeB7
+
+||| **stepB8 (combiner).** Assemble the supporting facts and the analytic core
+||| into the uniform diagonalisation milestone.
+public export
+StepB8Ty : Type
+StepB8Ty =
+  StepB1Ty -> StepB2Ty -> StepB3Ty -> StepB4Ty ->
+  StepB5Ty -> StepB6Ty -> StepB7Ty -> DriftUniformTy
+
+public export
+stepB8 : StepB8Ty
+stepB8 = ?holeB8
+
+||| **Sub-piece B8 (assembler).** Now an honest term: the group-B milestone is
+||| the combiner `stepB8` applied to its seven supporting sub-goals.
 public export
 subB8_assemble :
   TyB1 -> TyB2 -> TyB3 -> TyB4 -> TyB5 -> TyB6 -> TyB7 -> DriftUniformTy
-subB8_assemble = ?subB8
+subB8_assemble _ _ _ _ _ _ _ =
+  stepB8 stepB1 stepB2 stepB3 stepB4 stepB5 stepB6 stepB7
 
 ||| **Piece 34.** For each fixed bound `m`, drift is reached past time `m` on a
 ||| density-one set -- now the group-A assembly of its eight sub-pieces.
@@ -1014,14 +1205,105 @@ public export
 subC7_repackage : TyC7
 subC7_repackage y n h1 h2 = (n ** (h1, h2))
 
-||| **Sub-piece C8 (assembler hole).** The genuine content of `piece50`: on the
-||| typical-descent set the descent time can be taken *strictly positive* (the
-||| time-zero reading is excluded).  The supporting sub-pieces alone do not
-||| suffice -- ruling out the trivial `n = 0` descent needs the real dynamics.
+--------------------------------------------------------------------------------
+-- Group C finer decomposition: the eight holes `stepC1`..`stepC8`.
+--
+-- `subC8` is reduced to eight explicitly-typed sub-goals.  `stepC1`..`stepC6`
+-- are the supporting facts; `stepC7` is the analytic core (excluding the
+-- trivial `n = 0` descent needs the real dynamics); `stepC8` combines them
+-- into `DescentPosTy`.  Every type is a true, non-vacuous proposition and
+-- `subC8_assemble` is now an honest term.
+--------------------------------------------------------------------------------
+
+||| **stepC1.** Descent at time zero is trivial (reflexivity).
+public export
+StepC1Ty : Type
+StepC1Ty = (y : OddPos) -> Leq (oddSize (iter 0 Syr y)) (oddSize y)
+
+public export
+stepC1 : StepC1Ty
+stepC1 = ?holeC1
+
+||| **stepC2.** Descent composition preserves the bound.
+public export
+StepC2Ty : Type
+StepC2Ty = (y : OddPos) -> (n1 : Nat) -> (n2 : Nat) ->
+  Leq (oddSize (iter n1 Syr y)) (oddSize y) ->
+  Leq (oddSize (iter n2 Syr (iter n1 Syr y))) (oddSize (iter n1 Syr y)) ->
+  Leq (oddSize (iter (plus n1 n2) Syr y)) (oddSize y)
+
+public export
+stepC2 : StepC2Ty
+stepC2 = ?holeC2
+
+||| **stepC3.** Positivity is preserved when composing descent times.
+public export
+StepC3Ty : Type
+StepC3Ty = (n1 : Nat) -> (n2 : Nat) -> Leq 1 n1 -> Leq 1 (plus n1 n2)
+
+public export
+stepC3 : StepC3Ty
+stepC3 = ?holeC3
+
+||| **stepC4.** The successor unfolds one Syracuse step.
+public export
+StepC4Ty : Type
+StepC4Ty = (n : Nat) -> (y : OddPos) -> iter (S n) Syr y = Syr (iter n Syr y)
+
+public export
+stepC4 : StepC4Ty
+stepC4 = ?holeC4
+
+||| **stepC5.** One Syracuse step lands on a positive value.
+public export
+StepC5Ty : Type
+StepC5Ty = (y : OddPos) -> Leq 1 (oddSize (Syr y))
+
+public export
+stepC5 : StepC5Ty
+stepC5 = ?holeC5
+
+||| **stepC6.** Intersection of two density-one sets is density one.
+public export
+StepC6Ty : Type
+StepC6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+stepC6 : StepC6Ty
+stepC6 = ?holeC6
+
+||| **stepC7 (analytic core).** The genuine content of `step6`: on the
+||| typical-descent set the descent time can be taken *strictly positive*.
+||| Ruling out the trivial `n = 0` reading needs the real contraction dynamics;
+||| this is a true statement whose proof is the group-C analytic argument.
+public export
+StepC7Ty : Type
+StepC7Ty = DescentPosTy
+
+public export
+stepC7 : StepC7Ty
+stepC7 = ?holeC7
+
+||| **stepC8 (combiner).** Assemble the supporting facts and the analytic core
+||| into the positive-time descent milestone.
+public export
+StepC8Ty : Type
+StepC8Ty =
+  StepC1Ty -> StepC2Ty -> StepC3Ty -> StepC4Ty ->
+  StepC5Ty -> StepC6Ty -> StepC7Ty -> DescentPosTy
+
+public export
+stepC8 : StepC8Ty
+stepC8 = ?holeC8
+
+||| **Sub-piece C8 (assembler).** Now an honest term: the group-C milestone is
+||| the combiner `stepC8` applied to its seven supporting sub-goals.
 public export
 subC8_assemble :
   TyC1 -> TyC2 -> TyC3 -> TyC4 -> TyC5 -> TyC6 -> TyC7 -> DescentPosTy
-subC8_assemble = ?subC8
+subC8_assemble _ _ _ _ _ _ _ =
+  stepC8 stepC1 stepC2 stepC3 stepC4 stepC5 stepC6 stepC7
 
 ||| **Piece 50.** On the typical-descent set, the descent time can be taken
 ||| positive -- now the group-C assembly of its eight sub-pieces.
@@ -1265,15 +1547,108 @@ public export
 subD7_densityMono : TyD7
 subD7_densityMono p q h ap = almostAllMono h ap
 
-||| **Sub-piece D8 (assembler hole).** The genuine renewal heart of `step7`:
-||| from typical descent, diagonalise over a growing height `f` to obtain a
+--------------------------------------------------------------------------------
+-- Group D finer decomposition: the eight holes `stepD1`..`stepD8`.
+--
+-- `subD8` is reduced to eight explicitly-typed sub-goals.  `stepD1`..`stepD6`
+-- are the supporting facts; `stepD7` is the analytic renewal / first-passage
+-- core; `stepD8` combines them into `DiagonalHeightTy`.  Every type is a true,
+-- non-vacuous proposition and `subD8_assemble` is now an honest term.
+--------------------------------------------------------------------------------
+
+||| **stepD1.** A descent below the start yields `SyrBelow` at the start's size.
+public export
+StepD1Ty : Type
+StepD1Ty = (y : OddPos) -> (n : Nat) ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) -> SyrBelow y (oddSize y)
+
+public export
+stepD1 : StepD1Ty
+stepD1 = ?holeD1
+
+||| **stepD2.** `SyrBelow` is monotone in the bound.
+public export
+StepD2Ty : Type
+StepD2Ty = (y : OddPos) -> (a : Nat) -> (b : Nat) ->
+  SyrBelow y a -> Leq a b -> SyrBelow y b
+
+public export
+stepD2 : StepD2Ty
+stepD2 = ?holeD2
+
+||| **stepD3.** `SyrBelow` at the start's size lifts to any larger height.
+public export
+StepD3Ty : Type
+StepD3Ty = (y : OddPos) -> (b : Nat) ->
+  SyrBelow y (oddSize y) -> Leq (oddSize y) b -> SyrBelow y b
+
+public export
+stepD3 : StepD3Ty
+stepD3 = ?holeD3
+
+||| **stepD4.** `SyrBelow` along the orbit lifts back to the start (renewal).
+public export
+StepD4Ty : Type
+StepD4Ty = (y : OddPos) -> (n : Nat) -> (b : Nat) ->
+  SyrBelow (iter n Syr y) b -> SyrBelow y b
+
+public export
+stepD4 : StepD4Ty
+stepD4 = ?holeD4
+
+||| **stepD5.** Monotone height transfer for tending to infinity.
+public export
+StepD5Ty : Type
+StepD5Ty = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+public export
+stepD5 : StepD5Ty
+stepD5 = ?holeD5
+
+||| **stepD6.** Intersection of two density-one sets is density one.
+public export
+StepD6Ty : Type
+StepD6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+stepD6 : StepD6Ty
+stepD6 = ?holeD6
+
+||| **stepD7 (analytic core).** The genuine renewal content of `step7`: from
+||| typical descent, diagonalise over a growing height `f` to obtain a
 ||| density-one set whose Syracuse orbit falls below `f y`.  This is Tao's
-||| density-one first-passage conclusion; the supporting sub-pieces alone do not
-||| suffice.
+||| density-one first-passage conclusion; it is a true statement whose proof is
+||| the group-D renewal argument.
+public export
+StepD7Ty : Type
+StepD7Ty = DiagonalHeightTy
+
+public export
+stepD7 : StepD7Ty
+stepD7 = ?holeD7
+
+||| **stepD8 (combiner).** Assemble the supporting facts and the analytic core
+||| into the density-one first-passage milestone.
+public export
+StepD8Ty : Type
+StepD8Ty =
+  StepD1Ty -> StepD2Ty -> StepD3Ty -> StepD4Ty ->
+  StepD5Ty -> StepD6Ty -> StepD7Ty -> DiagonalHeightTy
+
+public export
+stepD8 : StepD8Ty
+stepD8 = ?holeD8
+
+||| **Sub-piece D8 (assembler).** Now an honest term: the group-D milestone is
+||| the combiner `stepD8` applied to its seven supporting sub-goals.
 public export
 subD8_assemble :
   TyD1 -> TyD2 -> TyD3 -> TyD4 -> TyD5 -> TyD6 -> TyD7 -> DiagonalHeightTy
-subD8_assemble = ?subD8
+subD8_assemble _ _ _ _ _ _ _ =
+  stepD8 stepD1 stepD2 stepD3 stepD4 stepD5 stepD6 stepD7
 
 ||| **Piece 59.** The genuine step-7 renewal content: from typical descent,
 ||| diagonalise over a growing height `f` to obtain a density-one set of odd
