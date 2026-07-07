@@ -39,6 +39,7 @@ import TaoCollatz.StepArith2
 import TaoCollatz.Large
 import TaoCollatz.ValuationBounds
 import TaoCollatz.DensityExtra
+import TaoCollatz.ValuationDriftSplit
 import Data.Nat
 
 %default total
@@ -588,14 +589,18 @@ subA7_driftSomewhere = piece32_driftSomewhereDensity
 -- group-A milestone with no further edit.
 --------------------------------------------------------------------------------
 
-||| **stepA1.** Each Syracuse step contributes a valuation `>= 1`.
+||| **stepA1.** Each *odd* Syracuse value contributes a valuation `>= 1`
+||| (`3m+1` is even for odd `m`, so at least one factor of two is removed).
+||| The oddness hypothesis is required: `OddPos` does not itself enforce
+||| oddness, and e.g. `syrValuation 0 = 0`, so the unconditional form is false.
 public export
 StepA1Ty : Type
-StepA1Ty = (y : OddPos) -> Leq 1 (syrValuation (oddValue y))
+StepA1Ty = (y : OddPos) -> isEven (oddValue y) = False ->
+  Leq 1 (syrValuation (oddValue y))
 
 public export
 stepA1 : StepA1Ty
-stepA1 = ?holeA1
+stepA1 y h = piece05_syrValuationGeOne (oddValue y) h
 
 ||| **stepA2.** Additivity of the partial valuation sum along a concatenated
 ||| orbit (the cocycle identity `S_{m+n} = S_m + S_n(iter m)`).
@@ -606,16 +611,19 @@ StepA2Ty = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
 
 public export
 stepA2 : StepA2Ty
-stepA2 = ?holeA2
+stepA2 = piece01_syrValSumAdd
 
-||| **stepA3.** The partial valuation sum dominates the number of steps taken.
+||| **stepA3.** The partial valuation sum dominates the number of steps taken
+||| after at least one step (`S n`): the orbit is odd from step two on, so the
+||| trailing `n` valuations are each `>= 1`.  (The `syrValSum n` form is false
+||| for degenerate starts such as `MkOddPos 0`, hence the `S n`.)
 public export
 StepA3Ty : Type
-StepA3Ty = (n : Nat) -> (y : OddPos) -> Leq n (syrValSum n y)
+StepA3Ty = (n : Nat) -> (y : OddPos) -> Leq n (syrValSum (S n) y)
 
 public export
 stepA3 : StepA3Ty
-stepA3 = ?holeA3
+stepA3 = piece06_syrValSumGeLen
 
 ||| **stepA4.** A lower size threshold is cofinite, hence density one.
 public export
@@ -624,7 +632,7 @@ StepA4Ty = (m : Nat) -> AlmostAllOddD (\y => oddSize y >= m)
 
 public export
 stepA4 : StepA4Ty
-stepA4 = ?holeA4
+stepA4 = piece31_cofiniteSizeAlmostAll
 
 ||| **stepA5.** The drift target is monotone in the valuation sum.
 public export
@@ -634,7 +642,7 @@ StepA5Ty = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
 
 public export
 stepA5 : StepA5Ty
-stepA5 = ?holeA5
+stepA5 = subA6_driftMono
 
 ||| **stepA6.** Intersection of two density-one sets is density one.
 public export
@@ -644,7 +652,7 @@ StepA6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
 
 public export
 stepA6 : StepA6Ty
-stepA6 = ?holeA6
+stepA6 = subA5_intersect
 
 ||| **stepA7 (analytic core).** The large-deviation content of `step4`: because
 ||| the typical Syracuse valuation is `2 > 8/5`, a density-one set of odd starts
@@ -656,9 +664,24 @@ public export
 StepA7Ty : Type
 StepA7Ty = DriftPastTy
 
+||| **The single remaining honest core of `stepA7` after the split.**  Eventual
+||| density-one drift of the *genuine* Syracuse valuation sum `syrValSum`: past
+||| some threshold `n0`, at every time `n >= n0` the `8/5` drift holds on a
+||| density-one set of odd starts.  This is the concentration / large-deviation
+||| content of Tao's argument; its proved mean-drift and variance backbone lives
+||| in `TaoCollatz.ValuationDriftMatrix` / `ValuationVarianceMatrix`.  All the
+||| surrounding reduction is proved in `TaoCollatz.ValuationDriftSplit`.
+public export
+driftDensityEventually : DensityDriftEventually syrValSum
+driftDensityEventually = ?holeA7core
+
+||| **stepA7, now assembled from the split.**  `driftPastFromEventually` is the
+||| fully-proved reduction (boolean/prop bridge, late-time choice `n >= m`, and
+||| witness packaging) of `TaoCollatz.ValuationDriftSplit`; the only remaining
+||| hole is the concentration core `driftDensityEventually`.
 public export
 stepA7 : StepA7Ty
-stepA7 = ?holeA7
+stepA7 = driftPastFromEventually syrValSum driftDensityEventually
 
 ||| **stepA8 (combiner).** Assemble the supporting facts and the analytic core
 ||| into drift past an arbitrary fixed time on a density-one set.
@@ -670,7 +693,7 @@ StepA8Ty =
 
 public export
 stepA8 : StepA8Ty
-stepA8 = ?holeA8
+stepA8 _ _ _ _ _ _ core = core
 
 ||| **Sub-piece A8 (assembler).** Now an honest term: the group-A milestone is
 ||| the combiner `stepA8` applied to its seven supporting sub-goals.
@@ -778,7 +801,7 @@ StepB1Ty = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
 
 public export
 stepB1 : StepB1Ty
-stepB1 = ?holeB1
+stepB1 = subB1_inflatedGrows
 
 ||| **stepB2.** Monotone height transfer for tending to infinity.
 public export
@@ -789,7 +812,7 @@ StepB2Ty = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
 
 public export
 stepB2 : StepB2Ty
-stepB2 = ?holeB2
+stepB2 = subB2_heightTransfer
 
 ||| **stepB3.** Every height value is reached by some witness time.
 public export
@@ -799,7 +822,7 @@ StepB3Ty = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
 
 public export
 stepB3 : StepB3Ty
-stepB3 = ?holeB3
+stepB3 = subB4_heightReachable
 
 ||| **stepB4.** The drift target is monotone in the valuation sum.
 public export
@@ -809,7 +832,7 @@ StepB4Ty = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
 
 public export
 stepB4 : StepB4Ty
-stepB4 = ?holeB4
+stepB4 = subB5_driftMono
 
 ||| **stepB5.** Intersection of two density-one sets is density one.
 public export
@@ -819,7 +842,7 @@ StepB5Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
 
 public export
 stepB5 : StepB5Ty
-stepB5 = ?holeB5
+stepB5 = subB6_intersect
 
 ||| **stepB6.** Density is preserved under pointwise implication of predicates.
 public export
@@ -830,7 +853,7 @@ StepB6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
 
 public export
 stepB6 : StepB6Ty
-stepB6 = ?holeB6
+stepB6 = subB7_densityMono
 
 ||| **stepB7 (analytic core).** The genuine step-4 uniformity: the fixed-time
 ||| drift family (`DriftPastTy`) upgrades to a single density-one set that
@@ -856,7 +879,7 @@ StepB8Ty =
 
 public export
 stepB8 : StepB8Ty
-stepB8 = ?holeB8
+stepB8 _ _ _ _ _ _ core = core
 
 ||| **Sub-piece B8 (assembler).** Now an honest term: the group-B milestone is
 ||| the combiner `stepB8` applied to its seven supporting sub-goals.
@@ -1222,7 +1245,7 @@ StepC1Ty = (y : OddPos) -> Leq (oddSize (iter 0 Syr y)) (oddSize y)
 
 public export
 stepC1 : StepC1Ty
-stepC1 = ?holeC1
+stepC1 = subC1_descentZero
 
 ||| **stepC2.** Descent composition preserves the bound.
 public export
@@ -1234,7 +1257,7 @@ StepC2Ty = (y : OddPos) -> (n1 : Nat) -> (n2 : Nat) ->
 
 public export
 stepC2 : StepC2Ty
-stepC2 = ?holeC2
+stepC2 = subC2_descentCompose
 
 ||| **stepC3.** Positivity is preserved when composing descent times.
 public export
@@ -1243,7 +1266,7 @@ StepC3Ty = (n1 : Nat) -> (n2 : Nat) -> Leq 1 n1 -> Leq 1 (plus n1 n2)
 
 public export
 stepC3 : StepC3Ty
-stepC3 = ?holeC3
+stepC3 = subC3_composePos
 
 ||| **stepC4.** The successor unfolds one Syracuse step.
 public export
@@ -1252,7 +1275,7 @@ StepC4Ty = (n : Nat) -> (y : OddPos) -> iter (S n) Syr y = Syr (iter n Syr y)
 
 public export
 stepC4 : StepC4Ty
-stepC4 = ?holeC4
+stepC4 = subC4_iterSucc
 
 ||| **stepC5.** One Syracuse step lands on a positive value.
 public export
@@ -1261,7 +1284,7 @@ StepC5Ty = (y : OddPos) -> Leq 1 (oddSize (Syr y))
 
 public export
 stepC5 : StepC5Ty
-stepC5 = ?holeC5
+stepC5 = subC5_stepPos
 
 ||| **stepC6.** Intersection of two density-one sets is density one.
 public export
@@ -1271,7 +1294,7 @@ StepC6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
 
 public export
 stepC6 : StepC6Ty
-stepC6 = ?holeC6
+stepC6 = subC6_intersect
 
 ||| **stepC7 (analytic core).** The genuine content of `step6`: on the
 ||| typical-descent set the descent time can be taken *strictly positive*.
@@ -1295,7 +1318,7 @@ StepC8Ty =
 
 public export
 stepC8 : StepC8Ty
-stepC8 = ?holeC8
+stepC8 _ _ _ _ _ _ core = core
 
 ||| **Sub-piece C8 (assembler).** Now an honest term: the group-C milestone is
 ||| the combiner `stepC8` applied to its seven supporting sub-goals.
@@ -1564,7 +1587,7 @@ StepD1Ty = (y : OddPos) -> (n : Nat) ->
 
 public export
 stepD1 : StepD1Ty
-stepD1 = ?holeD1
+stepD1 = subD1_descentToSyrBelow
 
 ||| **stepD2.** `SyrBelow` is monotone in the bound.
 public export
@@ -1574,7 +1597,7 @@ StepD2Ty = (y : OddPos) -> (a : Nat) -> (b : Nat) ->
 
 public export
 stepD2 : StepD2Ty
-stepD2 = ?holeD2
+stepD2 = subD2_belowMono
 
 ||| **stepD3.** `SyrBelow` at the start's size lifts to any larger height.
 public export
@@ -1584,7 +1607,7 @@ StepD3Ty = (y : OddPos) -> (b : Nat) ->
 
 public export
 stepD3 : StepD3Ty
-stepD3 = ?holeD3
+stepD3 = subD3_belowLift
 
 ||| **stepD4.** `SyrBelow` along the orbit lifts back to the start (renewal).
 public export
@@ -1594,7 +1617,7 @@ StepD4Ty = (y : OddPos) -> (n : Nat) -> (b : Nat) ->
 
 public export
 stepD4 : StepD4Ty
-stepD4 = ?holeD4
+stepD4 = subD4_renewalLift
 
 ||| **stepD5.** Monotone height transfer for tending to infinity.
 public export
@@ -1605,7 +1628,7 @@ StepD5Ty = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
 
 public export
 stepD5 : StepD5Ty
-stepD5 = ?holeD5
+stepD5 = subD5_heightTransfer
 
 ||| **stepD6.** Intersection of two density-one sets is density one.
 public export
@@ -1615,7 +1638,7 @@ StepD6Ty = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
 
 public export
 stepD6 : StepD6Ty
-stepD6 = ?holeD6
+stepD6 = subD6_intersect
 
 ||| **stepD7 (analytic core).** The genuine renewal content of `step7`: from
 ||| typical descent, diagonalise over a growing height `f` to obtain a
@@ -1640,7 +1663,7 @@ StepD8Ty =
 
 public export
 stepD8 : StepD8Ty
-stepD8 = ?holeD8
+stepD8 _ _ _ _ _ _ core = core
 
 ||| **Sub-piece D8 (assembler).** Now an honest term: the group-D milestone is
 ||| the combiner `stepD8` applied to its seven supporting sub-goals.

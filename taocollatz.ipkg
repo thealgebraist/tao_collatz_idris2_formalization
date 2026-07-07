@@ -49,6 +49,8 @@ modules = TaoCollatz.Core
         , TaoCollatz.UnifiedAnalytic
         , TaoCollatz.ValuationExact
         , TaoCollatz.ValuationMoment
+        , TaoCollatz.ValuationDriftMatrix
+        , TaoCollatz.ValuationVarianceMatrix
         , TaoCollatz.ValuationTail
         , TaoCollatz.GenuineEstimates
         , TaoCollatz.ContractionDrift
@@ -56,6 +58,7 @@ modules = TaoCollatz.Core
         , TaoCollatz.StepArith2
         , TaoCollatz.DensityTransfer
         , TaoCollatz.OddToPosTransfer
+        , TaoCollatz.ValuationDriftSplit
         , TaoCollatz.Pieces64
         , TaoCollatz.DiagonalizationLimit
         , TaoCollatz.ValuationOneClass

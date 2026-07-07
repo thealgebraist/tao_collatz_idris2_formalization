@@ -1,3 +1,107 @@
+# Summary of changes for run a0a72acc-b9db-46fc-90c8-ea684b6cbea9
+I continued the Lean 4 + Mathlib formalization of the central theorem of `taocollatz.pdf` (Tao's Theorem 1.3, "almost all Collatz orbits attain almost bounded values") in `RequestProject/TaoCollatz.lean` (namespace `TaoCollatzLean`). The theorem-proving tooling here operates on Lean, so I built on the existing Lean port; the file builds cleanly (module `RequestProject.TaoCollatz`).
+
+New, fully-proved content added this session (all verified to use only the standard axioms `propext`, `Classical.choice`, `Quot.sound`, with no `sorry`):
+- `dropTimeFuel_ge_iff` / `dropTime_ge_iff`: `dropTime m` is the 2-adic valuation of `m` (`j ≤ dropTime m ↔ 2^j ∣ m`).
+- `syrVal_ge_iff`: the one-step Syracuse valuation tail, `j ≤ syrVal x ↔ 2^j ∣ (3x+1)`.
+- `syrVal_eq_one_iff`: `syrVal x = 1` exactly when `x ≡ 3 (mod 4)`.
+- `syrVal_tail_count`: the exact geometric valuation tail — in one full period `range (2^j)` there is exactly one residue with `syrVal x ≥ j` (for `j ≥ 1`). This is the exact survival function `μ({a ≥ j})·2^j = 1` that is the concrete content of the paper's Proposition 1.9.
+
+Status of the deep remaining content: three `sorry` milestones remain — `step4_valuationLowerBound`, `step6_typicalDescent`, `step7_oddControl`. These are the genuine analytic heart of the paper (the density-form large-deviation/LLN drift of the Syracuse valuation, the typical-descent step, and the renewal/first-passage diagonalization). I confirmed by analysis and by exploration that these are true statements but are not derivable by elementary arithmetic from their stated hypotheses: they require substantial probability / discrete-Fourier / renewal infrastructure (as also catalogued in the project's `REMAINING_WORK.md`). The single-step distribution I proved is a real building block toward `step4`, but bridging to the density-one drift is the deep concentration argument that was not closed. The whole reduction chain feeding the main theorem (`theorem13`, `theorem13Strict`, `theorem13PaperDomain`) is already proved and depends only on these three explicitly-typed milestones; `#print axioms theorem13` shows exactly `sorryAx` (via them) plus the standard axioms, and nothing else non-standard. No axioms, `believe_me`, or `@[implemented_by]` were introduced, and I left `ARISTOTLE_SUMMARY.md` untouched.
+
+All changes are committed and pushed to `origin/main`.
+
+# Summary of changes for run cffe3610-bbc7-4275-9777-e7d0b3270a4a
+I converted the Tao–Collatz development from the Idris2 sources into Lean 4 + Mathlib, extending the existing Lean port in `RequestProject/TaoCollatz.lean` (namespace `TaoCollatzLean`) and proving everything that is genuinely provable. The file builds cleanly (module `RequestProject.TaoCollatz`); all fully-proved results use only the standard axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+What the Lean port now contains, mirroring the Idris files (`HoleProof.idr`, `Pieces64.idr`, `StepArith.idr`, `StepArith2.idr`, `Core.idr`, `OddPart.idr`):
+
+Proved outright (no assumptions):
+- Elementary dynamics: `collatz_drop`, `oddFactor_odd`, `syr_odd`, `syrRealize`, `oddPartHeightBound`, and the odd-part→Collatz transfer `colBelow_of_syrBelow`.
+- The 2-adic valuation core: `reconstructFuel`/`reconstruct` (`2^{dropTime n}·oddFactor n = n`), the one-step Syracuse factorisation `syr_factorization` (`2^{a(n)}·syr n = 3n+1`), and `syrValSum`.
+- The exact affine backbone (step 3): `affineBackbone` (`2^{S_n(x)}·Syr^n(x) = 3^n·x + c`), proved by induction.
+- The arithmetic of the descent: `strictGrowth` (`3^5<2^8`), `iteratedGrowth` (`3^{5k}≤2^{8k}`), the linear-beats-exponential lemmas `pow243_linear`/`pow243_z`, and `contractionArith` (`243·fy^5≤n ∧ 8n≤5·sn → 3^n·fy ≤ 2^{sn}`).
+- The eight-step gate decomposition of the deep input `SyracuseDensityControl`, with `step5_contractionFromValuation` (contraction dominance from the valuation drift) proved in full, plus the closed theorems `theorem13`, `theorem13Strict`, `theorem13PaperDomain` and the central reduction `theorem13GenuineFromSyracuse`.
+
+What remains open (three `sorry`s): the genuine analytic heart of Tao's paper, exactly the pieces the Idris development also leaves as holes:
+- `step4_valuationLowerBound` (density-form large-deviation / law-of-large-numbers drift of the Syracuse valuation; Idris `holeA7core`);
+- `step6_typicalDescent` (contraction dominance ⇒ strict positive-time descent; Idris `holeC7`);
+- `step7_oddControl` (renewal / height-diagonalisation to density-one first passage; Idris `holeD7`).
+These constitute the deep content of Tao's theorem; I attempted them with the prover at high effort but they were not closed. `theorem13` is a closed Lean term whose only unproved dependencies are these three explicitly-stated milestones (its `#print axioms` shows `sorryAx` via them, and nothing else non-standard).
+
+I also corrected a faithfulness bug introduced while decomposing: the `TypicalDescentDensity` milestone was vacuously true (the descent could be read off at time `m = 0`, since `syr^[0] x = x`). I strengthened it to require a positive-time strict descent (`∃ m, 0 < m ∧ syr^[m](oddFactor n) < oddFactor n`), matching the Idris `DescentPosTy`, so the milestone is non-degenerate.
+
+Per the no-axioms policy, the deep content is stated as honest `theorem … := by sorry` milestones rather than `axiom`s. The original Idris `.idr` files are left untouched as reference, and `ARISTOTLE_SUMMARY.md` was not edited.
+
+# Summary of changes for run cdc2f12b-0ade-46b6-b667-834939bf4e7a
+I ported the genuine-density core of the Tao Collatz development (previously only in Idris2) to Lean 4 + Mathlib, in a new self-contained file `RequestProject/TaoCollatz.lean` (namespace `TaoCollatzLean`). It builds cleanly (module `RequestProject.TaoCollatz`), has no `sorry`/`admit`/axioms/`native_decide`, and every top-level result uses only the standard axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+The file mirrors `TaoCollatz/MinimalProof.idr` (and the dynamics from `Core.idr`/`Dynamics.idr`/`OddPart.idr`), stating Theorem 1.3 of `taocollatz.pdf` ("almost all Collatz orbits attain almost bounded values") with a genuine natural-density notion of "almost all".
+
+Definitions (verified to compute correctly against the Idris examples: `collatz 3 = 10`, `syr 7 = 11`, `oddFactor 12 = 3`, `dropTime 12 = 2`, `dropTime 40 = 3`):
+- `collatz`, the Collatz map; `oddFactor` (odd part, via a fuelled recursion) and its step-count `dropTime`; the Syracuse map `syr n = oddFactor (3n+1)`; `EventuallyBelow`, `ColBelow`, `SyrBelow`.
+- Natural density: `DensityZero` (a Bool-valued set whose relative count in `range N` tends to 0) and `AlmostAllSatisfy` (a density-one good set contained in the target set).
+
+Proved outright (no assumptions), i.e. the whole reduction skeleton:
+- Elementary dynamics: `collatz_dropFuel`/`collatz_drop` (iterating Collatz reaches the odd part), `oddFactor_odd`, `collatz_odd`, `syr_odd`.
+- The odd-part / Syracuse orbit simulation: `syrRealize` (each Syracuse iterate of an odd number is a Collatz iterate), `oddPartHeightBound`, and the transfer `colBelow_of_syrBelow`.
+- The central reduction `theorem13GenuineFromSyracuse : SyracuseDensityControl → Theorem13Genuine`.
+- Non-degeneracy `Theorem13Genuine.exists_mem` (the density-one good set is non-empty, via `not_densityZero_const_true`), so the conclusion is not vacuous.
+- Strict and paper-domain reformulations: `growthPred`, `theorem13GenuineStrictFromGenuine`, `theorem13GenuinePaperDomainFromStrict`, plus `AlmostAllSatisfy.mono`.
+
+As in the Idris development, the single deep analytic input — `SyracuseDensityControl`, the density form of Tao's Theorem 1.6 for the Syracuse map (Propositions 1.9 / 7.8 plus the density transfer) — is left as an explicit, honestly-stated hypothesis rather than fabricated, because inhabiting it is the hard analytic content of the paper. Everything connecting that single input to the genuine main theorem is fully proved in Lean.
+
+I did not modify `ARISTOTLE_SUMMARY.md` or the existing Idris sources. All work is committed and pushed.
+
+# Summary of changes for run a958b553-e0d7-4a92-a817-86633e5467b0
+I found a provable way to split `stepA7` (the `DriftPastTy` analytic core in `TaoCollatz/Pieces64.idr`), which was previously a single monolithic hole `?holeA7` covering the whole statement.
+
+New module `TaoCollatz/ValuationDriftSplit.idr` decomposes it into named pieces, stated abstractly over the valuation-sum function `s` and instantiated at `s = syrValSum`:
+
+- `DensityDriftEventually s` — the one honest analytic core (a hole): past a threshold `n0`, at every time `n >= n0` the `8/5` drift `8n <= 5·s n y` holds on a density-one set of odd starts. This is the genuine concentration/large-deviation content.
+- `driftDensityCoreFromEventually` (proved) — picks a single late time `n = n0 + m` that is `>= m` and `>= n0`, via `leqPlusExtraLeft`/`leqPlusExtraRight`.
+- `driftPastFromDensityCore` (proved) — packages the fixed-time density-one set into the `DriftPast` witness shape, reflecting the boolean drift predicate into `Leq` with the existing `leqBTrue` bridge.
+- `driftPastFromEventually` (proved) — the full reduction `DensityDriftEventually s => DriftPast`.
+
+In `Pieces64.idr`, `stepA7` is now `stepA7 = driftPastFromEventually syrValSum driftDensityEventually`, which has exactly the type `DriftPastTy = StepA7Ty`. The former whole-statement hole `?holeA7` is replaced by the single sharper hole `?holeA7core = driftDensityEventually : DensityDriftEventually syrValSum`; all the connective reasoning (Bool/Prop bridge, choice of a late time `n >= m`, witness packaging) is now proved and total. The remaining core is documented as being backed by the already-proved transfer-matrix mean drift (`ValuationDriftMatrix.sumDriftGeoValuation`) and the linear-variance engine (`ValuationVarianceMatrix`), with the honest gap (Chebyshev normalisation over a real/rational measure layer + coupling to the true dynamics) unchanged.
+
+The module is added to `taocollatz.ipkg`; `%default total` is kept and no `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms are introduced. A design note is in `STEPA7_SPLIT.md`.
+
+Verification note: this is an Idris2 project and no Idris2 toolchain is available in this environment, so the new code could not be machine-compiled here. It was verified by hand against the already-compiling patterns it mirrors — the dependent-pair / density-one witness shape from `DiagonalizationLimit.pDiagFixedFamily` and the `leqB`/`leqBTrue` boolean-to-`Leq` bridge from `OddToPosTransfer` — so it should type-check under the project's Idris2. All changes are committed and pushed.
+
+# Summary of changes for run c529e6f2-cde3-473e-840f-3e42a1117d68
+I picked one of the four remaining irreducible analytic cores of the Idris2 formalization — **`stepA7` / `DriftPastTy`** in `TaoCollatz/Pieces64.idr`, the 2-adic valuation drift (whose own docstring identifies its heart as "the typical Syracuse valuation is 2 > 8/5") — and formalized it using classic matrix math.
+
+Key idea: the distribution of a sum of n independent valuation increments is the n-fold convolution power `convPow d n` (already in the project), and its moment vector is generated by a fixed finite transfer matrix, with one convolution step equal to one matrix step.
+
+New modules (both `%default total`, no holes, no `believe_me`/`postulate`/`assert_*`/`%foreign`/axioms; the whole package rebuilds cleanly from scratch, now 70 modules):
+
+- `TaoCollatz/ValuationDriftMatrix.idr` — the 2×2 mean transfer matrix `[[mass, 0],[weightedSum, mass]]`. Proves: the first moment is bilinear under convolution (`weightedSumConvolve`); one matrix step = one convolution step (`momentStep`); the moment vector after n steps is the n-th matrix power applied to (1,0) (`momentVectorMatrix`); and the main result `sumDriftMatrix` — the 8/5 drift cone is invariant under the transfer matrix, so the per-step drift `8·mass ≤ 5·weightedSum` propagates to `8·n·mass(Sₙ) ≤ 5·weightedSum(Sₙ)`, i.e. the 8/5 drift target holds in expectation for the n-step valuation sum. `sumDriftGeoValuation` specialises this to the genuine 2-adic geometric measure (k ≥ 4) via the existing per-step mean bound.
+
+- `TaoCollatz/ValuationVarianceMatrix.idr` — the 3×3 covariance transfer matrix `[[mass,0,0],[weightedSum,mass,0],[weightedSumSq,2·weightedSum,mass]]` (the concentration engine). Proves the binomial square over ℕ (`expandSq`), the second-moment convolution/covariance-propagation law (`weightedSumSqConvolve`), one 3×3 matrix step = one convolution step (`momentStep3`), and the full moment vector as a 3×3 matrix power (`momentVectorMatrix3`), giving the linear-variance scaling behind Chebyshev concentration.
+
+`MATRIX_DRIFT.md` documents the whole design: what is proved (the mean-drift matrix layer end to end, including for the genuine 2-adic measure, plus the covariance transfer matrix) and the two genuinely-analytic steps that remain and are deliberately not assumed — the Chebyshev normalisation (which needs a rational/real measure layer, not ℕ) and the coupling of the true Syracuse orbit valuations to the independent model.
+
+The four original core holes (`stepA7`, `stepB7`, `stepC7`, `stepD7`) are untouched; no new holes or axioms were introduced, and `ARISTOTLE_SUMMARY.md` was left unchanged. All work is committed and pushed.
+
+# Summary of changes for run 9db2e013-0512-4781-9090-9583f885543c
+I continued the Idris2 formalization of the central theorem from `taocollatz.pdf`, working in `TaoCollatz/Pieces64.idr` (the file that reduces the main theorem `theorem13` in `TaoCollatz/HoleProof.idr` to a set of holes).
+
+Starting state: 32 open holes (`stepA1..A8`, `stepB1..B8`, `stepC1..C8`, `stepD1..D8`).
+
+What I did:
+- Filled 28 of the 32 holes with honest, machine-checked proofs, leaving exactly the four genuine analytic cores. Specifically:
+  - The four combiners `stepA8/B8/C8/D8` are discharged by the honest projection (their type is `... -> Milestone -> Milestone`).
+  - The 24 supporting facts `stepX1..X6` are discharged by the already-proved sub-pieces of the same statements (partial-sum additivity/monotonicity, the density algebra, `iter` unfolding, `SyrBelow` monotonicity and renewal lifting, etc.).
+- Corrected two supporting step *types* that were actually false as written, because the `OddPos` record carries no oddness/positivity invariant (`MkOddPos 0` is a legal value): `StepA1Ty` now requires the value to be odd, and `StepA3Ty` uses `syrValSum (S n)`. Both corrected lemmas are now proved; they are only consumed by the projection combiners, so nothing downstream changes.
+- Added `CORES_STATUS.md` documenting the exact remaining content.
+
+Result (verified): a clean from-scratch rebuild of the whole package compiles all 68 modules with no errors, and only four holes remain — `stepA7` (`DriftPastTy`, the 2-adic valuation drift/concentration estimate), `stepB7` (`DriftUniformTy`, the diagonalisation to a growing height), `stepC7` (`DescentPosTy`), and `stepD7` (`DiagonalHeightTy`, the renewal first-passage). The closed term `theorem13` depends on exactly three of these (`stepA7`, `stepB7`, `stepD7`); `stepC7` is off the main path (its `piece50` is defined but unused).
+
+Honest assessment: these four are the irreducible deep analytic content of Tao's density-one first-passage argument and are not further reducible by bookkeeping. I did not manufacture proofs for them. I also note in the documentation that the main chain currently feeds a weak (`n = 0`) reading of `TypicalDescentDensity` through `piece49`, so making the theorem fully unconditional additionally requires strengthening that dynamical step.
+
+No `believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms were introduced (the only textual match is a descriptive comment), and `%default total` is preserved. All work is committed and pushed. I did not edit `ARISTOTLE_SUMMARY.md`.
+
 # Summary of changes for run 5067ce4d-6585-4231-acd5-4443e6f0bdca
 I refined the remaining analytic core of the Tao–Collatz formalization from **4 holes into exactly 32 holes**, as requested, keeping everything in Idris2.
 
