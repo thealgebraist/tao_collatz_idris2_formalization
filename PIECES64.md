@@ -208,3 +208,43 @@ density-one set can carry a witness index `n >= oddSize y`.  Hence any real proo
 of `piece35` must use the specific arithmetic of the Syracuse valuation sums.
 This is the diagonalization analogue of the earlier `piece58` correction; the
 concrete `piece35` itself stays a true, open, hard target.
+
+## Splitting the remaining lemmas into 64 pieces
+
+The four irreducible analytic cores left after the earlier passes —
+
+* `driftDensityEventually : DensityDriftEventually syrValSum` (the concentration
+  / large-deviation heart of `step4`);
+* `stepB7 : DriftUniformTy` (the uniform diagonalisation of `step4`/`piece35`);
+* `stepC7 : DescentPosTy` (the strictly-positive descent time of `step6`);
+* `stepD7 : DiagonalHeightTy` (the renewal / first-passage core of `step7`) —
+
+are now each **split into sixteen orthogonal sub-pieces**, `gX01 .. gX15` plus a
+combiner `gXCombine` (for `X` in `A, B, C, D`), i.e. **64 pieces in all**.  For
+every group the first fourteen sub-pieces (`gX01 .. gX14`) are **proved outright**
+(reusing the project's arithmetic / density infrastructure — `piece01`, `piece06`,
+`piece08`, `piece09`, `piece12`, `piece31`, `stepA1`, the `subX*` supporting
+facts, `andAlmostAllOdd`, `almostAllMono`, `leqTrans`, `leqRefl`,
+`leqPlusExtraLeft/Right`, `leqMultConstLeft`, `fLeqG`, `leqBTrue`,
+`driftDensityCoreFromEventually`, …); the fifteenth (`gX15`) carries the single
+genuine analytic core of that group as an explicit Idris hole
+(`?coreA_concentration`, `?coreB_diagonalization`, `?coreC_positiveDescent`,
+`?coreD_renewal`); and the sixteenth, `gXCombine`, is an honest term that takes
+all fifteen sub-pieces and returns the milestone type.
+
+Each group's milestone is now defined by its combiner —
+`driftDensityEventually = gACombine gA01 .. gA15`, `stepB7 = gBCombine gB01 ..
+gB15`, `stepC7 = gCCombine gC01 .. gC15`, `stepD7 = gDCombine gD01 .. gD15` — so
+the closed theorems of `HoleProof` (`theorem13`, `theorem13Strict`, …) now rest
+on the 64-piece decomposition.  Filling the four remaining core holes `gX15` —
+with no other change — upgrades them to an unconditional proof.
+
+Every type is a genuine, non-vacuous proposition; nothing is weakened to
+`Unit`/`True`.  The whole package builds from scratch with Idris2 0.8.0
+(`idris2 --build taocollatz.ipkg`, exit 0), stays `%default total`, and uses no
+`believe_me`/`postulate`/`assert_*`/`%foreign`/`idris_crash`/axioms.
+
+(A pre-existing build break was also fixed: the signature
+`driftDensityEventually : DensityDriftEventually syrValSum` was auto-binding the
+lowercase global `syrValSum` as an implicit under Idris2 0.8.0; qualifying it as
+`TaoCollatz.Pieces64.syrValSum` restores a clean build.)

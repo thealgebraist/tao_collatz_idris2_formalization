@@ -322,6 +322,69 @@ theorem syrVal_tail_count (j : ℕ) (hj : 1 ≤ j) :
         exact ( Int.dvd_of_dvd_mul_right_of_gcd_one h_cong <| by cases j <;> norm_num [ Int.gcd, Int.natAbs_pow ] at * );
       exact Finset.card_eq_one.mpr ⟨ x, Finset.eq_singleton_iff_unique_mem.mpr ⟨ Finset.mem_filter.mpr ⟨ hx.1, hx.2 ⟩, fun y hy => Nat.mod_eq_of_lt ( Finset.mem_range.mp ( Finset.mem_filter.mp hy |>.1 ) ) ▸ Nat.mod_eq_of_lt ( Finset.mem_range.mp hx.1 ) ▸ h_unique y ( Finset.mem_filter.mp hy |>.1 ) ( Finset.mem_filter.mp hy |>.2 ) ⟩ ⟩
 
+/-
+**Exact geometric valuation tail over a full period `2^K`**: for `1 ≤ j ≤ K`,
+there are exactly `2^(K-j)` residues `x` in `range (2^K)` with `syrVal x ≥ j`
+(all necessarily odd).  This strengthens `syrVal_tail_count` (the `K = j` case,
+where `2^(K-j) = 1`) to arbitrary period length, giving the exact survival
+function `μ({a ≥ j}) = 2^{-j}` of Tao's Proposition 1.9 across a genuine period.
+The count is `2^(K-j)` because `2^j ∣ 3x+1` pins `x` to a single residue class
+mod `2^j` (as `3` is invertible mod `2^j`), and that class meets `range (2^K)`
+in exactly `2^(K-j)` points.
+-/
+theorem syrVal_tail_count_period (K j : ℕ) (hj : 1 ≤ j) (hjK : j ≤ K) :
+    (Finset.filter (fun x => x % 2 = 1 ∧ j ≤ syrVal x) (Finset.range (2 ^ K))).card
+      = 2 ^ (K - j) := by
+        -- We count x in range(2^K) with x%2=1 and j ≤ syrVal x using the fact that 2^j ∣ 3x+1.
+        have h_count : (Finset.filter (fun x => 2 ^ j ∣ 3 * x + 1) (Finset.range (2 ^ K))).card = 2 ^ (K - j) := by
+          -- The congruence $3x + 1 \equiv 0 \pmod{2^j}$ has a unique solution modulo $2^j$.
+          obtain ⟨r, hr⟩ : ∃ r : ℕ, r < 2 ^ j ∧ 3 * r + 1 ≡ 0 [MOD 2 ^ j] := by
+            -- We need to find an $r$ such that $3r \equiv -1 \pmod{2^j}$.
+            have h_cong : ∃ r, 3 * r ≡ -1 [ZMOD 2 ^ j] := by
+              -- Since $3$ and $2^j$ are coprime, $3$ has an inverse modulo $2^j$.
+              have h_inv : ∃ x : ℤ, 3 * x ≡ 1 [ZMOD 2 ^ j] := by
+                exact ⟨ 3 ^ ( Nat.totient ( 2 ^ j ) - 1 ), by rw [ ← pow_succ', Nat.sub_add_cancel ( Nat.one_le_iff_ne_zero.mpr <| by positivity ) ] ; exact by simpa [ ← Int.natCast_modEq_iff ] using Nat.ModEq.pow_totient <| Nat.coprime_comm.mp <| Nat.Coprime.pow_left _ <| by decide ⟩;
+              exact ⟨ -h_inv.choose, by convert h_inv.choose_spec.neg using 1; ring ⟩;
+            obtain ⟨ r, hr ⟩ := h_cong;
+            exact ⟨ Int.toNat ( r % ( 2 ^ j ) ), by linarith [ Int.emod_lt_of_pos r ( by positivity : 0 < ( 2 ^ j : ℤ ) ), Int.toNat_of_nonneg ( Int.emod_nonneg r ( by positivity : ( 2 ^ j : ℤ ) ≠ 0 ) ) ], by simpa [ ← Int.natCast_modEq_iff, Int.ModEq, Int.add_emod, Int.mul_emod, Int.toNat_of_nonneg ( Int.emod_nonneg r ( by positivity : ( 2 ^ j : ℤ ) ≠ 0 ) ) ] using hr.add_right 1 ⟩;
+          -- The set of solutions to $3x + 1 \equiv 0 \pmod{2^j}$ in the range $0$ to $2^K - 1$ is exactly $\{r + k \cdot 2^j \mid k = 0, 1, \ldots, 2^{K-j} - 1\}$.
+          have h_solutions : Finset.filter (fun x => 2 ^ j ∣ 3 * x + 1) (Finset.range (2 ^ K)) = Finset.image (fun k => r + k * 2 ^ j) (Finset.range (2 ^ (K - j))) := by
+            ext x; simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_image];
+            constructor <;> intro hx;
+            · -- Since $3x + 1 \equiv 0 \pmod{2^j}$, we have $x \equiv r \pmod{2^j}$.
+              have h_cong : x ≡ r [MOD 2 ^ j] := by
+                have h_cong : 3 * x ≡ 3 * r [MOD 2 ^ j] := by
+                  rw [ Nat.modEq_iff_dvd ] at *;
+                  obtain ⟨ k, hk ⟩ := hx.2; obtain ⟨ l, hl ⟩ := hr.2; use -k - l; push_cast at *; linarith;
+                rw [ Nat.modEq_iff_dvd ] at *;
+                exact ( Int.dvd_of_dvd_mul_right_of_gcd_one ( by simpa [ mul_sub ] using h_cong ) <| by cases j <;> norm_num [ Int.gcd, Int.natAbs_pow ] at * );
+              rw [ ← Nat.mod_add_div x ( 2 ^ j ), h_cong ];
+              exact ⟨ x / 2 ^ j, Nat.div_lt_of_lt_mul <| by rw [ mul_comm, ← pow_add, Nat.sub_add_cancel hjK ] ; linarith, by rw [ Nat.mod_eq_of_lt hr.1 ] ; ring ⟩;
+            · rcases hx with ⟨ a, ha, rfl ⟩ ; rw [ show 2 ^ K = 2 ^ j * 2 ^ ( K - j ) by rw [ ← pow_add, Nat.add_sub_of_le hjK ] ] ; exact ⟨ by nlinarith, by rw [ Nat.dvd_iff_mod_eq_zero ] ; simpa [ Nat.ModEq, Nat.add_mod, Nat.mul_mod, Nat.pow_mod ] using hr.2 ⟩ ;
+          rw [ h_solutions, Finset.card_image_of_injective ] <;> aesop_cat;
+        convert h_count using 2 ; ext x ; simp +decide [ syrVal_ge_iff ];
+        intro hx h; have := Nat.dvd_trans ( pow_dvd_pow _ hj ) h; norm_num [ Nat.dvd_iff_mod_eq_zero, Nat.add_mod, Nat.mul_mod, Nat.pow_mod ] at this; have := Nat.mod_lt x two_pos; interval_cases x % 2 <;> simp_all +decide ;
+
+/-
+**Exact geometric valuation level counts over a full period `2^K`**: for
+`1 ≤ j` with `j + 1 ≤ K`, there are exactly `2^(K-j-1)` residues `x` in
+`range (2^K)` with `syrVal x = j` (all necessarily odd).  This is the exact
+*probability mass function* `μ({a = j}) = 2^{-(j+1)}` of the geometric law of
+Tao's Proposition 1.9, obtained from the tail counts by
+`2^(K-j) - 2^(K-(j+1)) = 2^(K-j-1)`.
+-/
+theorem syrVal_level_count_period (K j : ℕ) (hj : 1 ≤ j) (hjK : j + 1 ≤ K) :
+    (Finset.filter (fun x => x % 2 = 1 ∧ syrVal x = j) (Finset.range (2 ^ K))).card
+      = 2 ^ (K - j - 1) := by
+        -- The level set {x ∈ range(2^K) | syrVal x = j} equals the tail set {syrVal x ≥ j} minus the tail set {syrVal x ≥ j+1}.
+        have h_level_set : Finset.filter (fun x => x % 2 = 1 ∧ syrVal x = j) (Finset.range (2 ^ K)) = Finset.filter (fun x => x % 2 = 1 ∧ j ≤ syrVal x) (Finset.range (2 ^ K)) \ Finset.filter (fun x => x % 2 = 1 ∧ j + 1 ≤ syrVal x) (Finset.range (2 ^ K)) := by
+          grind;
+        rw [ h_level_set, Finset.card_sdiff ];
+        rw [ Finset.inter_eq_left.mpr ];
+        · have := syrVal_tail_count_period K j hj ( by linarith ) ; have := syrVal_tail_count_period K ( j + 1 ) ( by linarith ) ( by linarith ) ; simp_all +decide [ Nat.sub_sub ] ;
+          rw [ show K - j = K - ( j + 1 ) + 1 by omega, pow_succ' ] ; omega;
+        · grind
+
 /-! ## Genuine natural density -/
 
 /-- A `Bool`-valued set `bad` has natural density zero. -/

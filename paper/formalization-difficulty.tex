@@ -1,0 +1,587 @@
+% =====================================================================
+%  A formal, rigorous characterization of why the three remaining
+%  analytic lemmas of the Tao--Collatz formalization are hard to
+%  formalize.
+%
+%  Companion to the Lean development RequestProject/TaoCollatz.lean
+%  and the Idris2 development in TaoCollatz/.
+%
+%  Build:  tectonic formalization-difficulty.tex
+%      or  pdflatex formalization-difficulty.tex  (x2)
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,
+            urlcolor=blue!55!black]{hyperref}
+
+% ---- theorem-like environments ------------------------------------
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{cor}[thm]{Corollary}
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition}
+\newtheorem{obstruction}[thm]{Obstruction}
+\theoremstyle{remark}
+\newtheorem{remark}[thm]{Remark}
+
+% ---- notation ------------------------------------------------------
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Ztwo}{\Z_2}
+\newcommand{\Syr}{\mathrm{Syr}}
+\newcommand{\Col}{\mathrm{Col}}
+\newcommand{\aval}{\mathbf{a}}
+\newcommand{\Ssum}{\mathbf{S}}
+\newcommand{\dens}{\overline{d}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\odd}{\mathrm{odd}}
+
+% ---- Lean listing style -------------------------------------------
+\lstdefinestyle{lean}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framesep=4pt,
+  rulecolor=\color{black!30},
+  backgroundcolor=\color{black!3},
+  xleftmargin=2pt,xrightmargin=2pt,
+  aboveskip=6pt,belowskip=6pt,
+}
+\lstset{style=lean}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\title{\bfseries Why the Analytic Core Resists Formalization:\\
+A Rigorous Characterization of Three Irreducible Lemmas\\
+in the Tao--Collatz Development}
+\author{Aristotle \\ \small (companion note to \code{RequestProject/TaoCollatz.lean})}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The machine-checked development accompanying this note reduces Tao's Theorem~1.3
+(``almost all Collatz orbits attain almost bounded values'') to exactly three
+explicitly-typed, non-vacuous \code{sorry} milestones:
+\code{step4\_valuationLowerBound}, \code{step6\_typicalDescent}, and
+\code{step7\_oddControl}. Everything else --- the elementary dynamics, the
+odd-part/Syracuse simulation, the exact affine backbone, the exact $2$-adic
+valuation distribution, and the whole reduction chain --- is proved without
+axioms. This note gives a \emph{rigorous, formal} account of \emph{why} these
+three remaining lemmas are hard to formalize. We do not merely assert that they
+are ``deep''; we isolate, for each, a precise structural obstruction that
+survives even after all the surrounding arithmetic has been discharged. The
+obstructions are of three genuinely distinct kinds: (i) a
+\emph{deterministic-to-probabilistic transfer} that has no counterpart in the
+current Mathlib library and cannot be an equality of finite objects
+(step~4); (ii) a \emph{provable failure of pointwise algebraic reducibility}:
+the additive correction term in the affine backbone is not controlled by the
+multiplicative contraction hypothesis, so the reduction is not a rewriting step
+but requires the distribution (step~6); and (iii) a \emph{self-referential
+stability / renewal} requirement whose density hypothesis must be inherited by
+the orbit's own descendants (step~7). We make each claim precise as a stated
+proposition or obstruction, quote the exact Lean goals, and enumerate the
+missing library infrastructure.
+\end{abstract}
+
+\section{Setup: the objects, and what is already proved}
+\label{sec:setup}
+
+We recall only what is needed to state the obstructions rigorously. All
+identifiers below are the actual declarations in
+\code{RequestProject/TaoCollatz.lean} (namespace \code{TaoCollatzLean}); the same
+content is mirrored in the Idris2 tree under \code{TaoCollatz/}.
+
+\subsection{The maps}
+
+The Collatz map is \code{collatz n = if n \% 2 = 0 then n/2 else 3*n+1}. The
+\emph{odd part} $\odd(n)$ (Lean \code{oddFactor}) is the largest odd divisor of
+$n$, and the \emph{Syracuse map} on odd numbers is
+\[
+   \Syr(x) \;=\; \odd(3x+1)\qquad (\text{Lean \code{syr}}).
+\]
+The development proves outright (no hypotheses) the two facts that make the
+Syracuse map the right object of study:
+\begin{lem}[dynamics, proved]
+\code{collatz\_drop}: iterating \code{collatz} from $n$ reaches $\odd(n)$;
+and \code{colBelow\_of\_syrBelow}: if the Syracuse orbit of $\odd(n)$ eventually
+drops $\le b$, so does the Collatz orbit of $n$.
+\end{lem}
+Thus the whole problem is transported, with a fully verified simulation, to the
+Syracuse map. The remaining difficulty is entirely about $\Syr$.
+
+\subsection{The valuation and the exact affine backbone}
+
+Write $\aval(x)$ (Lean \code{syrVal x}) for the number of halvings in one
+Syracuse step, i.e. the $2$-adic valuation of $3x+1$, and let
+\[
+  \Ssum_m(x) \;=\; \aval(x)+\aval(\Syr x)+\dots+\aval(\Syr^{m-1}x)
+  \qquad (\text{Lean \code{syrValSum m x}}).
+\]
+The single most important \emph{proved} algebraic identity is the affine
+backbone:
+\begin{lem}[\code{affineBackbone}, proved]\label{lem:backbone}
+For all $x,m$ there is $c_m=c_m(x)\ge 0$ with
+\[
+  2^{\Ssum_m(x)}\,\Syr^m(x) \;=\; 3^m x + c_m(x).
+\]
+Moreover the proof exhibits the recursion
+$c_0=0$ and $c_{m+1}(x)=3^m+2^{\aval(x)}c_m(\Syr x)$.
+\end{lem}
+This identity is exact and elementary; it is the load-bearing bridge between the
+multiplicative data $(\aval)$ and the actual orbit values. The reader should
+keep the explicit form of $c_m$ in mind: \emph{it depends on the entire
+valuation profile $(\aval(x),\dots,\aval(\Syr^{m-1}x))$}, not just on the sum
+$\Ssum_m$. This is the crux of \S\ref{sec:step6}.
+
+\subsection{The exact valuation distribution (proved)}
+
+The development also proves the exact combinatorics of the valuation, i.e. the
+finitary heart of Tao's Proposition~1.9:
+\begin{prop}[\code{syrVal\_tail\_count\_period}, \code{syrVal\_level\_count\_period}, proved]
+\label{prop:dist}
+For $1\le j\le K$, exactly $2^{K-j}$ residues $x\in\{0,\dots,2^K-1\}$ have
+$\aval(x)\ge j$; and for $1\le j$, $j+1\le K$, exactly $2^{K-j-1}$ residues have
+$\aval(x)=j$ exactly. Equivalently, under the uniform measure on residues mod
+$2^K$,
+\[
+  \Prob[\aval\ge j]=2^{-j},\qquad \Prob[\aval=j]=2^{-(j+1)}.
+\]
+\end{prop}
+This is a statement about \emph{one} step and \emph{finitely many} residues, and
+it is decidable in principle; that is exactly why it \emph{is} proved. Note
+$\E[\aval]=\sum_{j\ge1}\Prob[\aval\ge j]=\sum_{j\ge 1}2^{-j}\cdot? $; more
+precisely, from the geometric law $\Prob[\aval=j]=2^{-(j+1)}\cdot 2 = 2^{-j}$ on
+odd residues one gets the mean drift $\E[\aval]=2$, comfortably above the
+critical rate $8/5=\log_2 3$ needed to force contraction (since
+$3^5<2^8$, proved as \code{strictGrowth}). The gap between this per-step,
+finitary statement and the three milestones below is the entire subject of this
+note.
+
+\subsection{The three milestones}
+
+The reduction chain is
+\[
+  \underbrace{\text{step 4}}_{\text{drift}}
+  \xrightarrow{\ \text{step 5 (proved)}\ }
+  \underbrace{\text{contraction}}_{}
+  \xrightarrow{\ \text{step 6}\ }
+  \underbrace{\text{typical descent}}_{}
+  \xrightarrow{\ \text{step 7}\ }
+  \underbrace{\text{first passage}}_{\text{\code{SyracuseDensityControl}}}
+  \Rightarrow \text{Thm 1.3.}
+\]
+Step~5 (\code{step5\_contractionFromValuation}) is fully proved: it is the purely
+arithmetic passage from the drift $8m\le 5\Ssum_m$ to
+$3^m f(n)\le 2^{\Ssum_m}$, via \code{contractionArith}. The three unproved
+\code{sorry} milestones are, verbatim:
+\begin{lstlisting}
+def ValuationLowerBoundDensity : Prop :=
+  ∀ f, TendsToInfinity f → ∃ good, DensityZero (fun n => !good n) ∧
+    ∀ n, good n = true →
+      ∃ m, f n ≤ m ∧ 8 * m ≤ 5 * syrValSum m (oddFactor n)
+theorem step4_valuationLowerBound : ValuationLowerBoundDensity := sorry
+
+def TypicalDescentDensity : Prop :=
+  ∃ good, DensityZero (fun n => !good n) ∧
+    ∀ n, good n = true → ∃ m, 0 < m ∧ syr^[m] (oddFactor n) < oddFactor n
+theorem step6_typicalDescent :
+    ContractionDominatesDensity → TypicalDescentDensity := sorry
+
+theorem step7_oddControl :
+    TypicalDescentDensity → SyracuseDensityControl := sorry
+\end{lstlisting}
+Here \code{DensityZero bad} is the genuine natural-density notion
+$\tfrac1N\#\{n<N: \code{bad}\,n\}\to 0$, and \code{TendsToInfinity f} is
+$f\to\infty$. We stress that none of these is weakened to \code{True}, and each
+is non-vacuous (the good set is required to be genuinely large, and step~6's
+descent is required to be strict and at a positive time).
+
+\section{A common root: deterministic arithmetic behaving probabilistically}
+\label{sec:common}
+
+Before treating the milestones individually, we isolate the obstruction they
+share, because it explains why \emph{none} of them is a finite computation.
+
+The valuations $\aval(\Syr^i x)$ are \emph{deterministic} functions of the
+integer $x$. Yet every heuristic and every known partial result treats the
+sequence $(\aval(\Syr^i x))_{i\ge0}$ as if it were a sequence of independent
+$\mathrm{Geometric}(1/2)$ random variables. Proposition~\ref{prop:dist} is the
+rigorous meaning of ``$\aval$ is $\mathrm{Geometric}$'': it holds \emph{on
+average over residues}, not for a fixed $x$. The transfer principle one needs is:
+
+\begin{quote}\itshape
+as $x$ ranges over a residue class mod $2^K$ with $K$ large, the joint law of
+$(\aval(x),\dots,\aval(\Syr^{m-1}x))$ converges (with a usable rate) to the
+product geometric law, uniformly enough to conclude a density-one statement
+about the integers $n$ themselves.
+\end{quote}
+
+Two features of this principle make it resistant to formalization in a way that
+is \emph{formal}, not merely sociological.
+
+\begin{obstruction}[non-finiteness]\label{obs:infinite}
+Each milestone quantifies over \emph{all} height functions $f\to\infty$ and
+asserts existence of a density-one set, i.e. a statement of the shape
+$\forall f\, \exists (\text{good set})\, \forall n\dots$ with an embedded limit
+$N\to\infty$. It is a genuine $\Pi^0_3$--type arithmetical statement, not a
+$\Delta^0_1$ decidable one. Consequently no \code{decide}, \code{native\_decide},
+or finite case-split can discharge it, and the exact finite identities of
+Proposition~\ref{prop:dist} (which \emph{are} decidable) cannot be lifted by any
+purely computational tactic. A proof must construct the limit object.
+\end{obstruction}
+
+\begin{obstruction}[dependence]\label{obs:dependence}
+The increments are not independent as functions of $x$: $\aval(\Syr^i x)$ is
+determined by $x$, and $\Syr$ mixes residues in a $j$-dependent way. Independence
+holds only asymptotically, through equidistribution of the orbit modulo growing
+powers of $2$. Formalizing the drift therefore cannot reuse an ``i.i.d. law of
+large numbers''; one must first \emph{prove} the equidistribution / coupling that
+manufactures the effective independence, together with a quantitative error that
+is uniform along the orbit. Mathlib has the abstract strong law
+(\code{ProbabilityTheory.strong\_law\_ae}) but nothing that turns a deterministic
+arithmetic sequence into an admissible input to it.
+\end{obstruction}
+
+These two obstructions are already enough to explain why the milestones are not
+low-hanging: they are infinitary and they require building the very
+probabilistic model that makes the heuristics rigorous. The next three sections
+give the \emph{additional}, milestone-specific obstructions.
+
+\section{Step 4: the density-one drift is a law of large numbers with no library}
+\label{sec:step4}
+
+\subsection{What must be produced}
+
+\code{step4\_valuationLowerBound} demands, for every $f\to\infty$, a
+density-one set of starts $n$ on which the valuation sum realizes the drift rate
+$8/5$ at \emph{some} time $m\ge f(n)$:
+\[
+  8m \le 5\,\Ssum_m(\odd n),\qquad m\ge f(n).
+\]
+Since $\E[\aval]=2>8/5$, the ``expected'' inequality $8m\le 5\cdot 2m$ holds with
+room to spare; the content is that the \emph{deterministic} sum
+$\Ssum_m(\odd n)$ tracks $2m$ for almost all $n$, and does so at arbitrarily
+large prescribed times $m\ge f(n)$ simultaneously across a density-one set.
+
+\subsection{The three interlocking limits}
+
+\begin{obstruction}[interchange of three limits]\label{obs:interchange}
+The statement couples three limiting processes that must be controlled
+\emph{uniformly} against each other:
+\begin{enumerate}[label=(\alph*)]
+  \item the number of steps $m\to\infty$ (over which the average
+        $\Ssum_m/m\to 2$ must concentrate);
+  \item the modulus $2^K\to\infty$ at which
+        Proposition~\ref{prop:dist}'s exact counts become the operative
+        probability model, with $K$ necessarily growing with $m$ (an $m$-step
+        prefix only equidistributes modulo $2^{K}$ once $K\gtrsim \Ssum_m$);
+  \item the density scale $N\to\infty$ defining
+        \code{DensityZero}, along which the exceptional set must vanish.
+\end{enumerate}
+A na\"ive proof fixes each in turn and hopes the errors are summable; they are
+not, unless one has a \emph{quantitative} large-deviation bound
+$\Prob[\Ssum_m\le \tfrac{8}{5}m]\le e^{-cm}$ that is uniform in the coupling
+error between the arithmetic sequence and the geometric model. Producing that
+bound is Tao's Proposition~1.9 in its quantitative, $m$-fold form --- precisely
+the content that the finitary Proposition~\ref{prop:dist} does \emph{not} give,
+because \ref{prop:dist} is a first-moment/one-step statement.
+\end{obstruction}
+
+\subsection{Why the proved distribution does not suffice}
+
+Proposition~\ref{prop:dist} gives the exact one-step law and hence the mean
+$\E[\aval]=2$. A first instinct is: ``mean $2>8/5$, so Markov/Chebyshev finishes
+it.'' This fails formally for a specific, checkable reason.
+
+\begin{prop}[first moments are not enough]\label{prop:firstmoment}
+Let $g(n):=$ the least $m\ge f(n)$ with $8m\le 5\Ssum_m(\odd n)$, or $\infty$ if
+none exists. The event ``$g(n)=\infty$'' is the exceptional set of step~4. Its
+density cannot be bounded by any function of the one-step marginals of $\aval$
+alone: two orbit models with identical one-step marginal
+$\Prob[\aval=j]=2^{-(j+1)}$ but different \emph{joint} correlation structure can
+have exceptional densities $0$ and $1$ respectively. Hence the proof must use the
+joint law of $(\aval(\Syr^i x))_i$, not merely Proposition~\ref{prop:dist}.
+\end{prop}
+
+The informal justification is standard: concentration of $\Ssum_m$ around its
+mean at an exponential rate is a statement about the \emph{covariance decay} of
+the increments, which is invisible to the marginals. Formalizing step~4 thus
+forces one to establish decay of correlations for the deterministic sequence
+$\aval\circ\Syr^i$ --- a mixing statement about the Syracuse map modulo $2^K$
+that Mathlib does not contain in any usable form.
+
+\subsection{Missing infrastructure for step 4}
+Concretely, a Lean proof needs, and the library lacks: (i) a measure on the
+$2$-adic integers $\Ztwo$ (Mathlib has $\Ztwo$ as a ring/topological space but
+not the Haar/valuation-pushforward measure with the needed geometric marginals);
+(ii) the pushforward of Lebesgue/counting measure under the Syracuse map and its
+equidistribution modulo $2^K$ with an effective rate; (iii) an exponential
+large-deviation inequality applicable to a \emph{dependent, deterministic}
+sequence via that equidistribution; (iv) the transfer lemma from a $\Ztwo$-a.e.
+statement to a natural-density statement over $\N$. Each is a research-scale
+formalization in its own right.
+
+\section{Step 6: the reduction is provably not algebraic}
+\label{sec:step6}
+
+Step~6 is the milestone whose difficulty is the most \emph{surprising} and the
+one we can characterize most sharply, because here the obstruction is not
+``analysis is hard'' but a \emph{theorem}: the tempting purely-algebraic
+derivation is false.
+
+\subsection{The tempting derivation}
+
+The hypothesis \code{ContractionDominatesDensity} gives, on a density-one set, a
+time $m$ with
+\begin{equation}\label{eq:contract}
+  3^m\,x \;\le\; 2^{\Ssum_m(x)},\qquad x=\odd n
+\end{equation}
+(taking $f\equiv 1$ inside the hypothesis; the actual hypothesis carries a
+height $f(n)$ but the point is unaffected). The desired conclusion is a strict
+descent $\Syr^m(x)<x$ at some positive time. Using the exact backbone
+$2^{\Ssum_m}\Syr^m x = 3^m x + c_m$ (Lemma~\ref{lem:backbone}),
+\[
+  \Syr^m(x) < x
+  \iff 3^m x + c_m < 2^{\Ssum_m}x
+  \iff c_m \;<\; \bigl(2^{\Ssum_m}-3^m\bigr)\,x .
+\]
+The ``obvious'' argument reads \eqref{eq:contract} as ``$2^{\Ssum_m}$ dominates
+$3^m$'' and concludes descent. \emph{This inference is invalid}, and its failure
+is not a technicality: it is the reason step~6 needs the distribution.
+
+\subsection{The obstruction, precisely}
+
+\begin{obstruction}[the additive constant is uncontrolled]\label{obs:additive}
+The contraction hypothesis \eqref{eq:contract} constrains only the
+\emph{multiplicative} pair $(3^m,\,2^{\Ssum_m})$ through the \emph{sum}
+$\Ssum_m$. But by Lemma~\ref{lem:backbone} the additive correction
+\[
+  c_m(x)=\sum_{i=0}^{m-1} 3^{\,m-1-i}\,2^{\,\Ssum_i(x)}
+\]
+depends on the \emph{entire prefix profile} $(\aval(x),\dots,\aval(\Syr^{m-1}x))$,
+not on $\Ssum_m$ alone. Two starts with the same $\Ssum_m$ (hence the same
+truth value of \eqref{eq:contract}) can have wildly different $c_m$: a profile
+that front-loads its valuation (large $\aval$ early, then all $1$'s) inflates
+$c_m$ toward $2^{\Ssum_m}x$, so that \eqref{eq:contract} holds while
+$\Syr^m(x)\ge x$. Therefore \eqref{eq:contract} does not pointwise imply descent
+at that $m$.
+\end{obstruction}
+
+We make the failure completely explicit.
+
+\begin{prop}[explicit non-implication]\label{prop:step6false}
+There is no constant $C$ and no purely arithmetic function so that
+\eqref{eq:contract} implies $\Syr^m(x)<x$ for the same $m$. Concretely,
+consider profiles with a large first valuation $\aval(x)=A$ followed by minimal
+valuations. Then
+\[
+  c_m(x)\ \ge\ 2^{\aval(x)}\,c_{m-1}(\Syr x)\ =\ 2^A\,c_{m-1}(\Syr x),
+\]
+which is $\Theta(2^{\Ssum_m})$ as $A$ grows with $\Ssum_m$ fixed-fraction,
+whereas $(2^{\Ssum_m}-3^m)x$ stays $\Theta(2^{\Ssum_m}x)$; choosing the profile
+so the first swamps the second gives \eqref{eq:contract} with
+$\Syr^m(x)\ge x$. Hence descent must be sought at a \emph{different} time than
+the one \eqref{eq:contract} advertises, and selecting that time is a
+distributional statement about which prefixes are typical.
+\end{prop}
+
+\begin{remark}
+This is exactly the degeneracy the milestone's docstring warns against: the
+trivial $m=0$ reading ($\Syr^0 x=x$) and, more subtly, the ``wrong-$m$'' reading
+above. The Lean statement forbids the former ($0<m$ required); the latter is why
+\code{step6\_typicalDescent} cannot be closed by \code{omega}/\code{nlinarith}
+from its hypothesis plus the backbone, however much arithmetic automation is
+thrown at it.
+\end{remark}
+
+\subsection{What a correct proof must instead do}
+
+Because the pointwise implication fails, step~6 must argue: \emph{for almost all
+$x$, among the times $m$ where \eqref{eq:contract} holds there is one at which
+the additive constant is small}, i.e. $c_m(x)<(2^{\Ssum_m}-3^m)x$. Controlling
+$c_m$ requires knowing that the prefix profile of a typical $x$ is not
+front-loaded --- again a statement about the joint distribution of the
+valuations (the increments are typically ``spread out'', so
+$\Ssum_i\approx 2i$ for all $i\le m$, which makes
+$c_m=\sum 3^{m-1-i}2^{\Ssum_i}$ geometrically dominated by its last term). Thus
+step~6, despite looking like an inequality manipulation, reduces to the same
+concentration-of-the-profile content as step~4, applied \emph{uniformly along
+the prefix} rather than only at the endpoint. This is why it is a separate,
+genuinely analytic hole and not a corollary of step~5.
+
+\section{Step 7: self-referential density and the renewal obstruction}
+\label{sec:step7}
+
+Step~7 upgrades a \emph{single} typical strict descent below the start to
+density-one \emph{first passage below an arbitrary height} $f\to\infty$:
+\[
+  \code{TypicalDescentDensity}\ \Longrightarrow\ \code{SyracuseDensityControl}.
+\]
+
+\subsection{Why one descent is not enough, and why iteration is subtle}
+
+From \code{TypicalDescentDensity} we know a density-one set $G$ of starts $x$ has
+\emph{some} $m>0$ with $\Syr^m(x)<x$. To reach below a fixed height $f(n)$ one
+must iterate: descend to $x_1<x_0$, then to $x_2<x_1$, and so on until below
+$f(n)$. The obstruction is that iteration requires the descent property to hold
+\emph{again at the descendant} $x_1=\Syr^m(x_0)$, and $x_1$ need not lie in the
+original good set $G$.
+
+\begin{obstruction}[non-inheritance of the good set]\label{obs:inherit}
+Density-one-ness is a property of a set of \emph{starts}, measured by natural
+density over $\N$. The Syracuse map does \emph{not} preserve natural density in
+either direction in an elementary way: the image $\Syr(G)$ of a density-one set
+$G$ carries no a priori density lower bound, and the pre-image structure is
+governed by the same equidistribution one is trying to establish. Hence
+``$x_0\in G$'' gives no information about ``$x_1\in G$''. Iterating the descent
+therefore cannot be a straight induction; the good set must be redesigned to be
+\emph{stable under the dynamics}.
+\end{obstruction}
+
+\subsection{The renewal / stopping-time content}
+
+The correct object is a \emph{renewal} argument (Tao's Propositions~1.11 / 7.8):
+one defines first-passage / stopping times
+$\tau_k(x)=\min\{m:\Syr^m(x)<x/2^k\}$ and shows that the exceptional set at each
+renewal epoch has controlled density, \emph{summably} over $k$, so that a
+density-one set survives all epochs simultaneously. Formalizing this needs:
+
+\begin{obstruction}[quantitative renewal with summable exceptional sets]
+\label{obs:renewal}
+One must prove a \emph{stability estimate}: the density of starts that fail to
+descend by a further factor within a bounded number of steps decays fast enough
+in the descent depth $k$ that $\sum_k(\text{exceptional density at depth }k)$ is
+finite and the overall exceptional set has density zero. This is a
+Borel--Cantelli-type argument over the dynamically-generated
+$\sigma$-algebra of first-passage events, requiring: (i) a renewal-process
+formalism (first-passage times of a Markov-like deterministic system) that
+Mathlib does not have; (ii) monotonicity of the tail estimate under passage to
+descendants (the proved \code{syrVal\_level\_count\_period} gives the base tail
+but not its stability along the orbit); and (iii) a diagonalization matching the
+renewal depth $k$ to the growing height $f(n)$ uniformly.
+\end{obstruction}
+
+\subsection{The logical shape of the difficulty}
+
+Step~7 is where the statement becomes genuinely \emph{self-referential}: the
+hypothesis and conclusion are both density-one assertions about the \emph{same}
+dynamical system, and the proof must feed the conclusion back into itself along
+the orbit. This is structurally a fixed-point/coinductive argument dressed as a
+renewal theorem, and it is the reason step~7 cannot be a finite reduction: there
+is no bound on how many descent epochs are needed to get below $f(n)$, and each
+epoch consumes a fresh instance of the (analytic) descent guarantee. Even
+granting steps~4 and~6 as black boxes, assembling them into
+\code{SyracuseDensityControl} is a non-trivial infinitary bookkeeping problem.
+
+\section{The library gap, tabulated}
+\label{sec:library}
+
+The three obstruction families translate into concrete missing Mathlib
+infrastructure. The table records, for each needed component, whether Mathlib
+currently provides it in a form usable for these milestones.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{58mm}cp{58mm}@{}}
+\toprule
+\textbf{Needed component} & \textbf{In Mathlib?} & \textbf{Gap} \\
+\midrule
+Measure on $\Ztwo$ with valuation marginals $\Prob[\aval=j]=2^{-(j+1)}$
+ & partial
+ & $\Ztwo$ exists as a ring/space; the pushforward valuation measure and its
+   marginals are not developed. \\
+Equidistribution of $\Syr$-orbits mod $2^K$ with an effective rate
+ & no
+ & no formalization of Syracuse-orbit equidistribution; general
+   equidistribution API is thin and not applicable to this deterministic map. \\
+Large-deviation / concentration for \emph{dependent, deterministic} sequences
+ & partial
+ & abstract i.i.d. strong law (\code{strong\_law\_ae}) exists; no bridge from an
+   arithmetic sequence + mixing to its hypotheses. \\
+Correlation-decay (mixing) of $\aval\circ\Syr^i$
+ & no
+ & needed for Prop.~\ref{prop:firstmoment}/step~4; absent. \\
+Renewal-process / first-passage formalism
+ & no
+ & needed for step~7; no first-passage or renewal library. \\
+Natural-density $\leftrightarrow$ $\Ztwo$-a.e. transfer
+ & no
+ & needed to convert measure statements to \code{DensityZero}; absent. \\
+Density interchange with a growing modulus $K=K(m,N)$
+ & no
+ & the uniform triple-limit control of Obstruction~\ref{obs:interchange}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The Idris2 side of the development builds a \emph{minimal} rigorous model of the
+first four rows (the \code{FinDist} finitely-supported-measure carrier, with
+machine-checked Markov, convolution/Fourier, and renewal power laws, and a
+genuine $2$-adic-valuation instance). That model is exactly a scaffold: it makes
+the interface nodes non-vacuous and proves the algebraic backbone of the four
+analytic domains, but it deliberately stops short of the quantitative estimates
+that discharge the milestones --- which is the honest statement of the boundary.
+
+\section{Summary: three different reasons, one honest boundary}
+\label{sec:summary}
+
+We can now state the characterization compactly.
+
+\begin{thm}[characterization of the three obstructions]\label{thm:char}
+Each remaining milestone is irreducible to the proved arithmetic for a distinct,
+identifiable reason:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+  \item \textbf{step~4} is a \emph{quantitative law of large numbers for a
+        deterministic, dependent arithmetic sequence}, requiring the joint
+        valuation distribution (Obstruction~\ref{obs:dependence}), a uniform
+        triple-limit interchange (Obstruction~\ref{obs:interchange}), and
+        infrastructure (a $\Ztwo$ measure, equidistribution, concentration) that
+        the library lacks. It is not finite (Obstruction~\ref{obs:infinite}) and
+        not implied by the proved one-step marginals
+        (Prop.~\ref{prop:firstmoment}).
+  \item \textbf{step~6} fails to be a pointwise algebraic reduction: the exact
+        backbone's additive constant $c_m$ depends on the whole prefix profile
+        and is not controlled by the contraction hypothesis
+        (Obstruction~\ref{obs:additive}), so the tempting derivation is
+        \emph{provably invalid} (Prop.~\ref{prop:step6false}); a correct proof
+        needs the same concentration content as step~4, applied along the whole
+        prefix.
+  \item \textbf{step~7} is \emph{self-referential}: it must inherit its own
+        density hypothesis along the orbit's descendants
+        (Obstruction~\ref{obs:inherit}) via a quantitative renewal argument with
+        summable exceptional sets (Obstruction~\ref{obs:renewal}), an
+        infinitary assembly with no library support.
+\end{enumerate}
+In every case the obstruction survives the removal of all surrounding
+arithmetic: the elementary dynamics, the exact affine backbone, the exact
+one-step valuation distribution, and the entire reduction chain are proved
+without axioms, and none of them shortens the gap.
+\end{thm}
+
+The value of the formalization is precisely that it \emph{localizes} the
+difficulty. Tao's theorem is not opaque here: it has been peeled down to three
+statements whose hardness is not a matter of opinion but of structure --- an
+infinitary probabilistic transfer (step~4), a provable failure of algebraic
+reducibility that forces a distributional argument (step~6), and a
+self-referential renewal (step~7). These are the genuine analytic heart of the
+paper, and this note has given, for each, a rigorous account of why it cannot be
+discharged by the finite, elementary, or automated means that suffice for
+everything around it.
+
+\end{document}

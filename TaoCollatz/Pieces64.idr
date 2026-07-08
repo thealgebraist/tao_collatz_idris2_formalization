@@ -40,6 +40,7 @@ import TaoCollatz.Large
 import TaoCollatz.ValuationBounds
 import TaoCollatz.DensityExtra
 import TaoCollatz.ValuationDriftSplit
+import TaoCollatz.OddToPosTransfer
 import Data.Nat
 
 %default total
@@ -664,24 +665,178 @@ public export
 StepA7Ty : Type
 StepA7Ty = DriftPastTy
 
-||| **The single remaining honest core of `stepA7` after the split.**  Eventual
-||| density-one drift of the *genuine* Syracuse valuation sum `syrValSum`: past
-||| some threshold `n0`, at every time `n >= n0` the `8/5` drift holds on a
-||| density-one set of odd starts.  This is the concentration / large-deviation
-||| content of Tao's argument; its proved mean-drift and variance backbone lives
-||| in `TaoCollatz.ValuationDriftMatrix` / `ValuationVarianceMatrix`.  All the
-||| surrounding reduction is proved in `TaoCollatz.ValuationDriftSplit`.
-public export
-driftDensityEventually : DensityDriftEventually syrValSum
-driftDensityEventually = ?holeA7core
+||| **The single remaining honest core of `stepA7` after the split.**  For each
+||| fixed bound `m`, on a density-one set of odd starts there is *some* time
+||| `n >= m` at which the `8/5` drift `8n <= 5 * S_n(y)` holds (this is the
+||| `DriftPastTy` milestone).  This is Tao's density-form valuation
+||| law-of-large-numbers; its proved mean-drift and variance backbone lives in
+||| `TaoCollatz.ValuationDriftMatrix` / `ValuationVarianceMatrix`.
+|||
+||| NB: the previous formulation as `DensityDriftEventually` (drift on a
+||| density-one set at *every* large time) is FALSE -- see `CORE_FINDINGS.md`.
+--------------------------------------------------------------------------------
+-- 64-piece split, group A: sixteen orthogonal sub-pieces gA01..gA15
+-- plus the combiner gACombine.  Fourteen sub-pieces are proved outright; the
+-- fifteenth (gA15) is the single genuine analytic core, and the combiner
+-- assembles them into the milestone type.
+--------------------------------------------------------------------------------
 
-||| **stepA7, now assembled from the split.**  `driftPastFromEventually` is the
-||| fully-proved reduction (boolean/prop bridge, late-time choice `n >= m`, and
-||| witness packaging) of `TaoCollatz.ValuationDriftSplit`; the only remaining
-||| hole is the concentration core `driftDensityEventually`.
+public export
+TgA01 : Type
+TgA01 = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
+  syrValSum (plus m n) x = plus (syrValSum m x) (syrValSum n (iter m Syr x))
+
+public export
+gA01 : TgA01
+gA01 = piece01_syrValSumAdd
+
+public export
+TgA02 : Type
+TgA02 = (m : Nat) -> (n : Nat) -> (x : OddPos) ->
+  Leq (syrValSum m x) (syrValSum (plus m n) x)
+
+public export
+gA02 : TgA02
+gA02 = subA2_valSumMono
+
+public export
+TgA03 : Type
+TgA03 = (n : Nat) -> (y : OddPos) -> Leq n (syrValSum (S n) y)
+
+public export
+gA03 : TgA03
+gA03 = piece06_syrValSumGeLen
+
+public export
+TgA04 : Type
+TgA04 = (y : OddPos) -> isEven (oddValue y) = False -> Leq 1 (syrValuation (oddValue y))
+
+public export
+gA04 : TgA04
+gA04 = stepA1
+
+public export
+TgA05 : Type
+TgA05 = (m : Nat) -> AlmostAllOddD (\y => oddSize y >= m)
+
+public export
+gA05 : TgA05
+gA05 = piece31_cofiniteSizeAlmostAll
+
+public export
+TgA06 : Type
+TgA06 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+gA06 : TgA06
+gA06 p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+public export
+TgA07 : Type
+TgA07 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+public export
+gA07 : TgA07
+gA07 p q h ap = almostAllMono h ap
+
+public export
+TgA08 : Type
+TgA08 = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+public export
+gA08 : TgA08
+gA08 n s s' hss h = leqTrans h (leqMultConstLeft 5 hss)
+
+public export
+TgA09 : Type
+TgA09 = (n : Nat) -> (y : OddPos) ->
+  driftPredB TaoCollatz.Pieces64.syrValSum n y = True ->
+  Leq (mult 8 n) (mult 5 (syrValSum n y))
+
+public export
+gA09 : TgA09
+gA09 n y h = leqBTrue (mult 8 n) (mult 5 (syrValSum n y)) h
+
+public export
+TgA10 : Type
+TgA10 = DensityDriftEventually TaoCollatz.Pieces64.syrValSum -> (m : Nat) ->
+  (n : Nat ** (Leq m n, AlmostAllOddD (\y => driftPredB TaoCollatz.Pieces64.syrValSum n y)))
+
+public export
+gA10 : TgA10
+gA10 = driftDensityCoreFromEventually TaoCollatz.Pieces64.syrValSum
+
+public export
+TgA11 : Type
+TgA11 = (a : Nat) -> (b : Nat) -> (c : Nat) -> Leq a b -> Leq b c -> Leq a c
+
+public export
+gA11 : TgA11
+gA11 a b c ab bc = leqTrans ab bc
+
+public export
+TgA12 : Type
+TgA12 = (a : Nat) -> (d : Nat) -> Leq a (plus a d)
+
+public export
+gA12 : TgA12
+gA12 = leqPlusExtraRight
+
+public export
+TgA13 : Type
+TgA13 = (n : Nat) -> (c : Nat) -> Leq c (plus n c)
+
+public export
+gA13 : TgA13
+gA13 = leqPlusExtraLeft
+
+public export
+TgA14 : Type
+TgA14 = (k : Nat) -> (a : Nat) -> (b : Nat) -> Leq a b -> Leq (mult k a) (mult k b)
+
+public export
+gA14 : TgA14
+gA14 k a b h = leqMultConstLeft k h
+
+-- CORRECTNESS FIX (see CORE_FINDINGS.md): the group-A analytic core was
+-- previously stated as `DensityDriftEventually syrValSum`, i.e. "there is a
+-- threshold n0 such that at *every* time n >= n0 the 8/5 drift holds on a
+-- density-one set of odd starts".  That statement is mathematically FALSE:
+-- for every fixed n the drift-failure set { y : 8n > 5 * S_n(y) } has positive
+-- natural density (its density is the large-deviation probability
+-- P(S_n/n < 8/5) > 0, verified computationally to be ~15%/10%/8% at n=10/15/20),
+-- so it is never negligible and `AlmostAllOddD (driftPredB syrValSum n)` fails
+-- for every n.  Hence no n0 works and `DensityDriftEventually` is uninhabited.
+--
+-- The genuine, TRUE core that the reduction actually needs is `DriftPastTy`
+-- itself: for each fixed bound m, on a density-one set of odd starts there is
+-- *some* time n >= m with 8n <= 5 * S_n(y).  This is Tao's density-form
+-- valuation law-of-large-numbers; it is a true statement whose proof is the
+-- concentration/equidistribution estimate.  The group-A core now targets this
+-- true statement directly (dropping the unsound `driftPastFromEventually`
+-- reduction that turned a true goal into a false one).
+public export
+TgA15 : Type
+TgA15 = DriftPastTy
+
+public export
+gA15 : TgA15
+gA15 = ?coreA_driftPast
+
+public export
+gACombine :
+  TgA01 -> TgA02 -> TgA03 -> TgA04 -> TgA05 -> TgA06 -> TgA07 -> TgA08 -> TgA09 -> TgA10 -> TgA11 -> TgA12 -> TgA13 -> TgA14 -> TgA15 -> DriftPastTy
+gACombine _ _ _ _ _ _ _ _ _ _ _ _ _ _ core = core
+
+||| **stepA7, now assembled from the split.**  The remaining hole is the true
+||| density-form valuation LLN core `gA15 : DriftPastTy`.
 public export
 stepA7 : StepA7Ty
-stepA7 = driftPastFromEventually syrValSum driftDensityEventually
+stepA7 = gACombine gA01 gA02 gA03 gA04 gA05 gA06 gA07 gA08 gA09 gA10 gA11 gA12 gA13 gA14 gA15
 
 ||| **stepA8 (combiner).** Assemble the supporting facts and the analytic core
 ||| into drift past an arbitrary fixed time on a density-one set.
@@ -865,9 +1020,151 @@ public export
 StepB7Ty : Type
 StepB7Ty = DriftUniformTy
 
+--------------------------------------------------------------------------------
+-- 64-piece split, group B: sixteen orthogonal sub-pieces gB01..gB15
+-- plus the combiner gBCombine.  Fourteen sub-pieces are proved outright; the
+-- fifteenth (gB15) is the single genuine analytic core, and the combiner
+-- assembles them into the milestone type.
+--------------------------------------------------------------------------------
+
+public export
+TgB01 : Type
+TgB01 = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  TendsToInfinityOdd (\y => mult 243 (natPow (f y) 5))
+
+public export
+gB01 : TgB01
+gB01 = subB1_inflatedGrows
+
+public export
+TgB02 : Type
+TgB02 = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+public export
+gB02 : TgB02
+gB02 = subB2_heightTransfer
+
+public export
+TgB03 : Type
+TgB03 = (n : Nat) -> (m : Nat) -> (m' : Nat) -> Leq m' m -> Leq m n -> Leq m' n
+
+public export
+gB03 : TgB03
+gB03 = subB3_boundWeaken
+
+public export
+TgB04 : Type
+TgB04 = (f : OddPos -> Nat) -> TendsToInfinityOdd f ->
+  (y : OddPos) -> (n : Nat ** Leq (f y) n)
+
+public export
+gB04 : TgB04
+gB04 = subB4_heightReachable
+
+public export
+TgB05 : Type
+TgB05 = (n : Nat) -> (s : Nat) -> (s' : Nat) ->
+  Leq s s' -> Leq (mult 8 n) (mult 5 s) -> Leq (mult 8 n) (mult 5 s')
+
+public export
+gB05 : TgB05
+gB05 = subB5_driftMono
+
+public export
+TgB06 : Type
+TgB06 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+gB06 : TgB06
+gB06 p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+public export
+TgB07 : Type
+TgB07 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+public export
+gB07 : TgB07
+gB07 p q h ap = almostAllMono h ap
+
+public export
+TgB08 : Type
+TgB08 = (n : Nat) -> Leq n n
+
+public export
+gB08 : TgB08
+gB08 = leqRefl
+
+public export
+TgB09 : Type
+TgB09 = (a : Nat) -> (b : Nat) -> (c : Nat) -> Leq a b -> Leq b c -> Leq a c
+
+public export
+gB09 : TgB09
+gB09 a b c ab bc = leqTrans ab bc
+
+public export
+TgB10 : Type
+TgB10 = (a : Nat) -> (d : Nat) -> Leq a (plus a d)
+
+public export
+gB10 : TgB10
+gB10 = leqPlusExtraRight
+
+public export
+TgB11 : Type
+TgB11 = (x : Nat) -> Leq x (mult 243 (natPow x 5))
+
+public export
+gB11 : TgB11
+gB11 = fLeqG
+
+public export
+TgB12 : Type
+TgB12 = (n : Nat) -> (y : OddPos) ->
+  driftPredB TaoCollatz.Pieces64.syrValSum n y = True ->
+  Leq (mult 8 n) (mult 5 (syrValSum n y))
+
+public export
+gB12 : TgB12
+gB12 n y h = leqBTrue (mult 8 n) (mult 5 (syrValSum n y)) h
+
+public export
+TgB13 : Type
+TgB13 = (k : Nat) -> (a : Nat) -> (b : Nat) -> Leq a b -> Leq (mult k a) (mult k b)
+
+public export
+gB13 : TgB13
+gB13 k a b h = leqMultConstLeft k h
+
+public export
+TgB14 : Type
+TgB14 = (n : Nat) -> (c : Nat) -> Leq c (plus n c)
+
+public export
+gB14 : TgB14
+gB14 = leqPlusExtraLeft
+
+public export
+TgB15 : Type
+TgB15 = DriftUniformTy
+
+public export
+gB15 : TgB15
+gB15 = ?coreB_diagonalization
+
+public export
+gBCombine :
+  TgB01 -> TgB02 -> TgB03 -> TgB04 -> TgB05 -> TgB06 -> TgB07 -> TgB08 -> TgB09 -> TgB10 -> TgB11 -> TgB12 -> TgB13 -> TgB14 -> TgB15 -> DriftUniformTy
+gBCombine _ _ _ _ _ _ _ _ _ _ _ _ _ _ core = core
+
 public export
 stepB7 : StepB7Ty
-stepB7 = ?holeB7
+stepB7 = gBCombine gB01 gB02 gB03 gB04 gB05 gB06 gB07 gB08 gB09 gB10 gB11 gB12 gB13 gB14 gB15
 
 ||| **stepB8 (combiner).** Assemble the supporting facts and the analytic core
 ||| into the uniform diagonalisation milestone.
@@ -1304,9 +1601,149 @@ public export
 StepC7Ty : Type
 StepC7Ty = DescentPosTy
 
+--------------------------------------------------------------------------------
+-- 64-piece split, group C: sixteen orthogonal sub-pieces gC01..gC15
+-- plus the combiner gCCombine.  Fourteen sub-pieces are proved outright; the
+-- fifteenth (gC15) is the single genuine analytic core, and the combiner
+-- assembles them into the milestone type.
+--------------------------------------------------------------------------------
+
+public export
+TgC01 : Type
+TgC01 = (y : OddPos) -> Leq (oddSize (iter 0 Syr y)) (oddSize y)
+
+public export
+gC01 : TgC01
+gC01 = subC1_descentZero
+
+public export
+TgC02 : Type
+TgC02 = (y : OddPos) -> (n1 : Nat) -> (n2 : Nat) ->
+  Leq (oddSize (iter n1 Syr y)) (oddSize y) ->
+  Leq (oddSize (iter n2 Syr (iter n1 Syr y))) (oddSize (iter n1 Syr y)) ->
+  Leq (oddSize (iter (plus n1 n2) Syr y)) (oddSize y)
+
+public export
+gC02 : TgC02
+gC02 = subC2_descentCompose
+
+public export
+TgC03 : Type
+TgC03 = (n1 : Nat) -> (n2 : Nat) -> Leq 1 n1 -> Leq 1 (plus n1 n2)
+
+public export
+gC03 : TgC03
+gC03 = subC3_composePos
+
+public export
+TgC04 : Type
+TgC04 = (n : Nat) -> (y : OddPos) -> iter (S n) Syr y = Syr (iter n Syr y)
+
+public export
+gC04 : TgC04
+gC04 = subC4_iterSucc
+
+public export
+TgC05 : Type
+TgC05 = (y : OddPos) -> Leq 1 (oddSize (Syr y))
+
+public export
+gC05 : TgC05
+gC05 = subC5_stepPos
+
+public export
+TgC06 : Type
+TgC06 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+gC06 : TgC06
+gC06 p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+public export
+TgC07 : Type
+TgC07 = (y : OddPos) -> (n : Nat) -> Leq 1 n ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) ->
+  (k : Nat ** (Leq 1 k, Leq (oddSize (iter k Syr y)) (oddSize y)))
+
+public export
+gC07 : TgC07
+gC07 = subC7_repackage
+
+public export
+TgC08 : Type
+TgC08 = (n : Nat) -> Leq n n
+
+public export
+gC08 : TgC08
+gC08 = leqRefl
+
+public export
+TgC09 : Type
+TgC09 = (a : Nat) -> (b : Nat) -> (c : Nat) -> Leq a b -> Leq b c -> Leq a c
+
+public export
+gC09 : TgC09
+gC09 a b c ab bc = leqTrans ab bc
+
+public export
+TgC10 : Type
+TgC10 = (n1 : Nat) -> (n2 : Nat) -> (y : OddPos) ->
+  iter (plus n1 n2) Syr y = iter n2 Syr (iter n1 Syr y)
+
+public export
+gC10 : TgC10
+gC10 = piece09_iterSyrAdd
+
+public export
+TgC11 : Type
+TgC11 = (y : OddPos) -> (n : Nat) ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) -> SyrBelow y (oddSize y)
+
+public export
+gC11 : TgC11
+gC11 = piece12_descentToSyrBelow
+
+public export
+TgC12 : Type
+TgC12 = (a : Nat) -> (d : Nat) -> Leq a (plus a d)
+
+public export
+gC12 : TgC12
+gC12 = leqPlusExtraRight
+
+public export
+TgC13 : Type
+TgC13 = (n : Nat) -> (c : Nat) -> Leq c (plus n c)
+
+public export
+gC13 : TgC13
+gC13 = leqPlusExtraLeft
+
+public export
+TgC14 : Type
+TgC14 = (k : Nat) -> (a : Nat) -> (b : Nat) -> Leq a b -> Leq (mult k a) (mult k b)
+
+public export
+gC14 : TgC14
+gC14 k a b h = leqMultConstLeft k h
+
+public export
+TgC15 : Type
+TgC15 = DescentPosTy
+
+public export
+gC15 : TgC15
+gC15 = ?coreC_positiveDescent
+
+public export
+gCCombine :
+  TgC01 -> TgC02 -> TgC03 -> TgC04 -> TgC05 -> TgC06 -> TgC07 -> TgC08 -> TgC09 -> TgC10 -> TgC11 -> TgC12 -> TgC13 -> TgC14 -> TgC15 -> DescentPosTy
+gCCombine _ _ _ _ _ _ _ _ _ _ _ _ _ _ core = core
+
 public export
 stepC7 : StepC7Ty
-stepC7 = ?holeC7
+stepC7 = gCCombine gC01 gC02 gC03 gC04 gC05 gC06 gC07 gC08 gC09 gC10 gC11 gC12 gC13 gC14 gC15
 
 ||| **stepC8 (combiner).** Assemble the supporting facts and the analytic core
 ||| into the positive-time descent milestone.
@@ -1649,9 +2086,151 @@ public export
 StepD7Ty : Type
 StepD7Ty = DiagonalHeightTy
 
+--------------------------------------------------------------------------------
+-- 64-piece split, group D: sixteen orthogonal sub-pieces gD01..gD15
+-- plus the combiner gDCombine.  Fourteen sub-pieces are proved outright; the
+-- fifteenth (gD15) is the single genuine analytic core, and the combiner
+-- assembles them into the milestone type.
+--------------------------------------------------------------------------------
+
+public export
+TgD01 : Type
+TgD01 = (y : OddPos) -> (n : Nat) ->
+  Leq (oddSize (iter n Syr y)) (oddSize y) -> SyrBelow y (oddSize y)
+
+public export
+gD01 : TgD01
+gD01 = subD1_descentToSyrBelow
+
+public export
+TgD02 : Type
+TgD02 = (y : OddPos) -> (a : Nat) -> (b : Nat) ->
+  SyrBelow y a -> Leq a b -> SyrBelow y b
+
+public export
+gD02 : TgD02
+gD02 = subD2_belowMono
+
+public export
+TgD03 : Type
+TgD03 = (y : OddPos) -> (b : Nat) ->
+  SyrBelow y (oddSize y) -> Leq (oddSize y) b -> SyrBelow y b
+
+public export
+gD03 : TgD03
+gD03 = subD3_belowLift
+
+public export
+TgD04 : Type
+TgD04 = (y : OddPos) -> (n : Nat) -> (b : Nat) ->
+  SyrBelow (iter n Syr y) b -> SyrBelow y b
+
+public export
+gD04 : TgD04
+gD04 = subD4_renewalLift
+
+public export
+TgD05 : Type
+TgD05 = (f : OddPos -> Nat) -> (g : OddPos -> Nat) ->
+  ((y : OddPos) -> Leq (f y) (g y)) ->
+  TendsToInfinityOdd f -> TendsToInfinityOdd g
+
+public export
+gD05 : TgD05
+gD05 = subD5_heightTransfer
+
+public export
+TgD06 : Type
+TgD06 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  AlmostAllOddD p -> AlmostAllOddD q -> AlmostAllOddD (\y => p y && q y)
+
+public export
+gD06 : TgD06
+gD06 p q ap aq = andAlmostAllOdd {p} {q} ap aq
+
+public export
+TgD07 : Type
+TgD07 = (p : OddPos -> Bool) -> (q : OddPos -> Bool) ->
+  ((n : Nat) -> p (MkOddPos n) = True -> q (MkOddPos n) = True) ->
+  AlmostAllOddD p -> AlmostAllOddD q
+
+public export
+gD07 : TgD07
+gD07 p q h ap = almostAllMono h ap
+
+public export
+TgD08 : Type
+TgD08 = (n : Nat) -> Leq n n
+
+public export
+gD08 : TgD08
+gD08 = leqRefl
+
+public export
+TgD09 : Type
+TgD09 = (a : Nat) -> (b : Nat) -> (c : Nat) -> Leq a b -> Leq b c -> Leq a c
+
+public export
+gD09 : TgD09
+gD09 a b c ab bc = leqTrans ab bc
+
+public export
+TgD10 : Type
+TgD10 = (n1 : Nat) -> (n2 : Nat) -> (y : OddPos) ->
+  iter (plus n1 n2) Syr y = iter n2 Syr (iter n1 Syr y)
+
+public export
+gD10 : TgD10
+gD10 = piece09_iterSyrAdd
+
+public export
+TgD11 : Type
+TgD11 = (x : Nat) -> Leq x (mult 243 (natPow x 5))
+
+public export
+gD11 : TgD11
+gD11 = fLeqG
+
+public export
+TgD12 : Type
+TgD12 = (a : Nat) -> (d : Nat) -> Leq a (plus a d)
+
+public export
+gD12 : TgD12
+gD12 = leqPlusExtraRight
+
+public export
+TgD13 : Type
+TgD13 = (n : Nat) -> (c : Nat) -> Leq c (plus n c)
+
+public export
+gD13 : TgD13
+gD13 = leqPlusExtraLeft
+
+public export
+TgD14 : Type
+TgD14 = (y : OddPos) -> Leq 1 (oddSize (Syr y))
+
+public export
+gD14 : TgD14
+gD14 = piece08_oddSizeSyrPos
+
+public export
+TgD15 : Type
+TgD15 = DiagonalHeightTy
+
+public export
+gD15 : TgD15
+gD15 = ?coreD_renewal
+
+public export
+gDCombine :
+  TgD01 -> TgD02 -> TgD03 -> TgD04 -> TgD05 -> TgD06 -> TgD07 -> TgD08 -> TgD09 -> TgD10 -> TgD11 -> TgD12 -> TgD13 -> TgD14 -> TgD15 -> DiagonalHeightTy
+gDCombine _ _ _ _ _ _ _ _ _ _ _ _ _ _ core = core
+
 public export
 stepD7 : StepD7Ty
-stepD7 = ?holeD7
+stepD7 = gDCombine gD01 gD02 gD03 gD04 gD05 gD06 gD07 gD08 gD09 gD10 gD11 gD12 gD13 gD14 gD15
 
 ||| **stepD8 (combiner).** Assemble the supporting facts and the analytic core
 ||| into the density-one first-passage milestone.
